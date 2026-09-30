@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prabhav Portal | Smart City Waste Management & Civic Operations</title>
+  
+  <!-- Modern Inter & JetBrains Mono Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="styles.css">
+
+  <!-- Leaflet.js CDN for Real Map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+</head>
+<body>
+
+  <!-- Top Navigation Header -->
+  <header class="header">
+    <div class="container header-container">
+      <a href="#hero" class="brand-logo">
+        <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+        </svg>
+        <span>Prabhav <strong>Portal</strong></span>
+      </a>
+
+      <!-- Mobile Navigation Hamburger -->
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+
+      <!-- Main Navigation Links -->
+      <nav class="nav-menu" id="navMenu">
+        <a href="#hero" class="nav-link active">Home</a>
+        <a href="#map-view" class="nav-link">Live City Map</a>
+        <a href="#report" class="nav-link">Report Waste</a>
+        <a href="#track" class="nav-link">Track Grievance</a>
+        <a href="#pickup" class="nav-link">Doorstep Pickup</a>
+        <a href="#awareness" class="nav-link">Segregation Guide</a>
+        <a href="#assistant" class="nav-link">AI Assistant</a>
+        <a href="admin.html" id="adminPortalLink" class="btn btn-secondary nav-btn">Admin Portal</a>
+        <div id="authNavArea" class="auth-nav-area">
+          <button id="openAuthModalBtn" class="btn btn-primary btn-sm" type="button">Sign In / Register</button>
+          <div id="userProfileNav" class="user-profile-nav hidden">
+            <span class="user-greeting">👋 <strong id="navUserName">Citizen</strong></span>
+            <span class="role-pill" id="navUserRole">citizen</span>
+            <span class="swachhta-badge" id="navSwachhtaBadge" title="Swachhta Rewards">
+              <svg class="star-icon" viewBox="0 0 24 24" fill="currentColor">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+              </svg>
+              <strong id="navSwachhtaPointsVal">0</strong> Pts
+            </span>
+            <button id="logoutBtn" class="btn btn-sm btn-ghost" type="button">Logout</button>
+          </div>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero-section" id="hero">
+    <div class="container">
+      <div class="hero-split">
+        <!-- Hero Left Content -->
+        <div class="hero-left">
+          <div class="badge-tag">
+            <span class="live-pulse-dot"></span>
+            Municipal Smart-City Network
+          </div>
+          <h1 class="hero-title">Cleaner City. <span class="gradient-text">Smarter Tomorrow.</span></h1>
+          <p class="hero-subtitle">
+            Report waste, request collection, track resolution and help build cleaner communities.
+          </p>
+          <div class="hero-actions">
+            <a href="#report" class="btn btn-primary">
+              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+              </svg>
+              Report Waste Grievance
+            </a>
+            <a href="#track" class="btn btn-outline">
+              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              Track Resolution
+            </a>
+          </div>
+
+          <!-- Quick Civic Stats Strip -->
+          <div class="hero-stats">
+            <div class="stat-pill">
+              <span class="stat-num">98.4%</span>
+              <span class="stat-desc">Resolution Rate</span>
+            </div>
+            <div class="stat-pill">
+              <span class="stat-num">&lt; 2.5 hrs</span>
+              <span class="stat-desc">Avg Response Time</span>
+            </div>
+            <div class="stat-pill">
+              <span class="stat-num">100%</span>
+              <span class="stat-desc">Ward Coverage</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Hero Right Custom CSS/SVG Smart Civic Visual -->
+        <div class="hero-visual">
+          <div class="civic-visual-card glass-card">
+            <div class="visual-header">
+              <div class="visual-badge">
+                <span class="pulse-indicator"></span>
+                <span>Telemetry Grid</span>
+              </div>
+              <a href="#map-view" style="font-size: 0.75rem; font-weight: 700; color: var(--primary); text-decoration: none; display: inline-flex; align-items: center; gap: 0.25rem;">
+                Live Map &rarr;
+              </a>
+            </div>
+
+            <div class="visual-map-grid">
+              <svg class="city-grid-svg" viewBox="0 0 420 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <linearGradient id="gridBg" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#f8fafc"/>
+                    <stop offset="100%" stop-color="#ecfdf5"/>
+                  </linearGradient>
+                  <linearGradient id="parkBg" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#d1fae5"/>
+                    <stop offset="100%" stop-color="#a7f3d0"/>
+                  </linearGradient>
+                  <pattern id="dotPattern" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
+                    <circle cx="2" cy="2" r="1.2" fill="#cbd5e1" opacity="0.6"/>
+                  </pattern>
+                </defs>
+
+                <!-- City Base Background -->
+                <rect width="420" height="220" fill="url(#gridBg)"/>
+                <rect width="420" height="220" fill="url(#dotPattern)"/>
+
+                <!-- Eco Park Zone -->
+                <rect x="250" y="25" width="135" height="70" rx="8" fill="url(#parkBg)" opacity="0.8"/>
+                <text x="317" y="62" text-anchor="middle" fill="#047857" font-size="10" font-weight="700" letter-spacing="1">CENTRAL ECO PARK</text>
+
+                <!-- City Blocks -->
+                <rect x="35" y="25" width="80" height="55" rx="6" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/>
+                <rect x="135" y="25" width="95" height="55" rx="6" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/>
+                <rect x="35" y="105" width="80" height="85" rx="6" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/>
+                <rect x="135" y="105" width="160" height="85" rx="6" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/>
+                <rect x="315" y="115" width="70" height="75" rx="6" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/>
+
+                <!-- Road Network Grid (Clean Street Lines) -->
+                <path d="M 0 90 L 420 90" stroke="#cbd5e1" stroke-width="16" opacity="0.4"/>
+                <path d="M 0 90 L 420 90" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="6 8"/>
+
+                <path d="M 125 0 L 125 220" stroke="#cbd5e1" stroke-width="14" opacity="0.4"/>
+                <path d="M 125 0 L 125 220" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="6 8"/>
+
+                <path d="M 240 0 L 240 220" stroke="#cbd5e1" stroke-width="14" opacity="0.4"/>
+                <path d="M 305 90 L 305 220" stroke="#cbd5e1" stroke-width="12" opacity="0.4"/>
+
+                <!-- Active Dispatch Route (Animated Green Trace) -->
+                <path d="M 40 90 L 125 90 L 125 150 L 240 150 L 240 90 L 370 90" 
+                      stroke="#059669" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" class="animated-route" fill="none"/>
+
+                <!-- Smart Bin Sensor A (Normal) -->
+                <circle cx="75" cy="90" r="10" fill="#10b981" fill-opacity="0.2"/>
+                <circle cx="75" cy="90" r="5" fill="#10b981"/>
+                <circle cx="75" cy="90" r="2.5" fill="#ffffff"/>
+
+                <!-- Smart Bin Sensor B (87% Capacity Alert) -->
+                <circle cx="125" cy="150" r="13" fill="#f59e0b" fill-opacity="0.25"/>
+                <circle cx="125" cy="150" r="6" fill="#f59e0b"/>
+                <circle cx="125" cy="150" r="2.5" fill="#ffffff"/>
+
+                <!-- Dispatch Fleet Vehicle Icon at (240, 115) -->
+                <g transform="translate(228, 105)">
+                  <rect width="24" height="14" rx="3" fill="#065f46"/>
+                  <rect x="15" y="2" width="7" height="10" rx="1.5" fill="#93c5fd"/>
+                  <circle cx="6" cy="14" r="2.5" fill="#0f172a"/>
+                  <circle cx="18" cy="14" r="2.5" fill="#0f172a"/>
+                  <circle cx="12" cy="0" r="4" fill="#3b82f6" fill-opacity="0.5"/>
+                  <circle cx="12" cy="0" r="2" fill="#3b82f6"/>
+                </g>
+
+                <!-- Destination Target Marker at (370, 90) -->
+                <circle cx="370" cy="90" r="14" fill="#10b981" fill-opacity="0.25"/>
+                <circle cx="370" cy="90" r="7" fill="#065f46"/>
+                <path d="M 367 90 L 369 92 L 373 88" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+
+              <!-- Floating Metric Micro-Chips Over Map -->
+              <div class="visual-chips-row">
+                <div class="vchip green">
+                  <span class="vchip-dot"></span>
+                  <span>Bin #42: 87% Full</span>
+                </div>
+                <div class="vchip blue">
+                  <span class="vchip-dot" style="background:var(--info);"></span>
+                  <span>Unit #08 En Route</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Visual Card Footer Telemetry -->
+            <div class="visual-stats-row">
+              <div>
+                <span class="vstat-label">Active Wards</span>
+                <span class="vstat-num">48 / 48</span>
+              </div>
+              <div>
+                <span class="vstat-label">Response SLA</span>
+                <span class="vstat-num text-green">&lt; 2.5 hrs</span>
+              </div>
+              <div>
+                <span class="vstat-label">Fleet Status</span>
+                <span class="vstat-num text-blue">24 Online</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Citizen Dashboard Overview Ribbon -->
+  <section class="citizen-overview-section" id="citizen-dashboard">
+    <div class="container">
+      <div class="citizen-dashboard-grid">
+        <div class="civic-metric-card">
+          <div class="metric-top">
+            <span class="metric-label">Active Grievances</span>
+            <div class="metric-icon-bubble amber">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+              </svg>
+            </div>
+          </div>
+          <div class="metric-val" id="citizenActiveCount">1</div>
+          <div class="metric-sub">Complaints currently in field dispatch</div>
+        </div>
+
+        <div class="civic-metric-card">
+          <div class="metric-top">
+            <span class="metric-label">Pending Pickups</span>
+            <div class="metric-icon-bubble purple">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="1" y="3" width="15" height="13"></rect>
+                <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
+                <circle cx="5.5" cy="18.5" r="2.5"></circle>
+                <circle cx="18.5" cy="18.5" r="2.5"></circle>
+              </svg>
+            </div>
+          </div>
+          <div class="metric-val" id="citizenPendingPickupsCount">1</div>
+          <div class="metric-sub">Scheduled doorstep bulky waste pickups</div>
+        </div>
+
+        <div class="civic-metric-card">
+          <div class="metric-top">
+            <span class="metric-label">Resolved Cleanups</span>
+            <div class="metric-icon-bubble green">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+              </svg>
+            </div>
+          </div>
+          <div class="metric-val text-green" id="citizenResolvedCount">2</div>
+          <div class="metric-sub">Verified closed & sanitized sites</div>
+        </div>
+
+        <!-- Swachhta Points Metric Card -->
+        <div class="civic-metric-card">
+          <div class="metric-top">
+            <span class="metric-label">Swachhta Points</span>
+            <div class="metric-icon-bubble gold">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+              </svg>
+            </div>
+          </div>
+          <div class="metric-val text-gold" id="citizenSwachhtaPoints">0</div>
+          <div class="metric-sub">+10 pts per resolved complaint</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Real Live Waste & Grievance Map Section -->
+  <section class="section map-section" id="map-view">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag">Geospatial Intelligence</span>
+        <h2 class="section-title">City-Wide Live Waste Map</h2>
+        <p class="section-subtitle">Real-time geospatial map tracking all citizen complaints, active sanitation zones, and resolved cleanup locations across all wards.</p>
+      </div>
+
+      <div class="map-card glass-card">
+        <div class="map-toolbar">
+          <div class="map-toolbar-left">
+            <span class="badge-tag"><span class="live-pulse-dot"></span> Live Telemetry Active</span>
+            <span class="map-total-badge" id="citizenMapTotalBadge">Loading city complaints...</span>
+          </div>
+
+          <!-- Status Filters for Map -->
+          <div class="map-filter-group" id="mapFilterGroup">
+            <button type="button" class="map-filter-btn active" data-map-filter="all">All Complaints</button>
+            <button type="button" class="map-filter-btn" data-map-filter="Reported">🔴 Reported</button>
+            <button type="button" class="map-filter-btn" data-map-filter="In-Progress">🔵 In-Progress</button>
+            <button type="button" class="map-filter-btn" data-map-filter="Resolved">🟢 Resolved</button>
+          </div>
+        </div>
+
+        <!-- Real Leaflet Map Container -->
+        <div id="citizenComplaintsMap" class="real-leaflet-map" style="height: 480px; width: 100%; border-radius: var(--radius-md); overflow: hidden; position: relative; z-index: 1;"></div>
+
+        <div class="map-card-footer">
+          <div class="map-legend-items">
+            <span class="legend-item"><span class="legend-circle red"></span> <strong>Reported</strong> (Pending dispatch)</span>
+            <span class="legend-item"><span class="legend-circle blue"></span> <strong>In-Progress / Assigned</strong> (Crew on-site)</span>
+            <span class="legend-item"><span class="legend-circle green"></span> <strong>Resolved</strong> (+10 Swachhta Points awarded)</span>
+          </div>
+          <span class="map-hint-text">💡 Click any marker pin to view complaint details, ticket ID, and resolution status.</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Report Waste Section (Two-Column Desktop Split Grid) -->
+  <section class="section report-section" id="report">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag">Citizen Reporting</span>
+        <h2 class="section-title">Report Municipal Waste</h2>
+        <p class="section-subtitle">Notice an overflowing dumpster, street litter, or missed route? Pin the location and alert your municipal team instantly.</p>
+      </div>
+
+      <div class="report-split-grid">
+        <!-- Left Column: Report Waste Form -->
+        <div class="report-form-card">
+          <form id="reportWasteForm">
+            <div class="form-group">
+              <label for="reportTitle">Report Title *</label>
+              <input type="text" id="reportTitle" class="form-control" placeholder="e.g., Overflowing dumpster near Central Market" required>
+            </div>
+
+            <div class="form-group">
+              <label for="reportCategory">Waste Category *</label>
+              <select id="reportCategory" class="form-control" required>
+                <option value="" disabled selected>Select waste category</option>
+                <option value="Overflowing Bin">Overflowing Bin</option>
+                <option value="Road Garbage">Road Garbage</option>
+                <option value="Illegal Dumping">Illegal Dumping</option>
+                <option value="Missed Collection">Missed Collection</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="reportDesc">Description & Landmarks</label>
+              <textarea id="reportDesc" class="form-control" rows="3" placeholder="Provide additional details, nearby landmarks, or severity..."></textarea>
+            </div>
+
+            <div class="form-group">
+              <label for="reportPhoto">Evidence Photo</label>
+              <div class="file-upload-box" id="fileUploadContainer">
+                <input type="file" id="reportPhoto" accept="image/*" class="file-input">
+                <div class="file-dummy-label">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="upload-icon">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+                  </svg>
+                  <span id="uploadText">Click or drag photo to upload (PNG, JPG)</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Geotagged Location -->
+            <div class="form-group">
+              <div class="location-header">
+                <label>Geotagged Location *</label>
+                <button type="button" id="detectLocationBtn" class="btn btn-sm btn-ghost">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon-sm">
+                    <polygon points="3 11 22 2 13 21 11 13 3 11"/>
+                  </svg>
+                  Detect My Location
+                </button>
+              </div>
+              <div class="form-row">
+                <div class="form-col">
+                  <input type="text" id="reportLat" class="form-control" placeholder="Latitude (e.g., 12.9716)" readonly required>
+                </div>
+                <div class="form-col">
+                  <input type="text" id="reportLng" class="form-control" placeholder="Longitude (e.g., 77.5946)" readonly required>
+                </div>
+              </div>
+              <span class="field-hint" id="locHint">Click "Detect My Location" to automatically stamp coordinates.</span>
+            </div>
+
+            <!-- Anonymous Option: Polished Toggle Switch -->
+            <div class="form-group">
+              <label class="toggle-switch-wrapper" for="reportAnon">
+                <input type="checkbox" id="reportAnon">
+                <span class="toggle-slider"></span>
+                <span class="toggle-label">Submit as an anonymous citizen report</span>
+              </label>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block">Submit Waste Report</button>
+          </form>
+
+          <!-- Dynamic Success Feedback Area -->
+          <div id="reportSuccessAlert" class="alert-box alert-success hidden">
+            <h4>Report Submitted Successfully!</h4>
+            <p>Your civic grievance has been logged into the Prabhav Portal municipal dispatch grid.</p>
+            <div class="alert-meta">
+              <span>Complaint ID: <strong id="generatedTicketId">CP-4029</strong></span>
+              <span>Estimated Crew Arrival: <strong>Within 2.5 hours</strong></span>
+              <span>Swachhta Reward: <strong class="text-green">⭐ +10 Points upon resolution</strong></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Municipal Dispatch SLA & Guide -->
+        <div class="report-side-card">
+          <div>
+            <div class="badge-tag" style="margin-bottom: 0.75rem;">Civic Protocol</div>
+            <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem;">4-Hour Resolution SLA</h3>
+            <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5;">Every verified report triggers an automated ticket dispatched to the nearest zonal ward sanitation vehicle.</p>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 1rem;">
+            <div class="guide-step">
+              <div class="guide-step-num">1</div>
+              <div class="guide-step-body">
+                <h5>Instant Geotag Verification</h5>
+                <p>Coordinates are cross-checked against municipal ward boundary shapes and 100m duplicate radius.</p>
+              </div>
+            </div>
+
+            <div class="guide-step">
+              <div class="guide-step-num">2</div>
+              <div class="guide-step-body">
+                <h5>Sanitation Truck Route Optimization</h5>
+                <p>High-density zones are prioritized for priority routing and container collection.</p>
+              </div>
+            </div>
+
+            <div class="guide-step">
+              <div class="guide-step-num">3</div>
+              <div class="guide-step-body">
+                <h5>Photo Proof of Clearance</h5>
+                <p>Ground teams record post-cleanup photo evidence before marking the grievance resolved.</p>
+              </div>
+            </div>
+
+            <div class="guide-step">
+              <div class="guide-step-num">4</div>
+              <div class="guide-step-body">
+                <h5>Citizen Satisfaction Audit</h5>
+                <p>Rate the cleanup quality to directly inform ward officer accountability scores.</p>
+              </div>
+            </div>
+          </div>
+
+          <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid var(--emerald-border); border-radius: var(--radius-sm); padding: 1rem;">
+            <span style="font-size: 0.8rem; font-weight: 600; color: var(--emerald-400); display: block; margin-bottom: 0.25rem;">💡 Pro Tip for Fast Clearance:</span>
+            <p style="font-size: 0.78rem; color: var(--text-secondary); line-height: 1.4; margin: 0;">Upload a clear photo of the dumpster or roadside waste so dispatchers can send the appropriately sized compactor.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Complaint Tracking Section -->
+  <section class="section track-section" id="track">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag">Live Audit</span>
+        <h2 class="section-title">Track Complaint Status</h2>
+        <p class="section-subtitle">Enter your Prabhav Portal complaint ticket number to view transparent, four-stage civic resolution progress.</p>
+      </div>
+
+      <div class="track-card">
+        <form id="trackForm" class="track-search-bar">
+          <input type="text" id="trackInput" class="form-control" placeholder="Enter Complaint ID (Try: CP-1001, CP-1002, CP-1003)" value="CP-1001" required>
+          <button type="submit" class="btn btn-primary">Search</button>
+        </form>
+
+        <!-- Complaint Info Card -->
+        <div class="ticket-summary" id="ticketSummary">
+          <div class="summary-item">
+            <span class="summary-label">Ticket ID</span>
+            <span class="summary-val" id="trackTicketId">CP-1001</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">Category</span>
+            <span class="summary-val" id="trackCategory">Overflowing Bin</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">Ward / Zone</span>
+            <span class="summary-val" id="trackLocation">Ward 12, MG Road</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">Last Updated</span>
+            <span class="summary-val" id="trackUpdated">15 mins ago</span>
+          </div>
+        </div>
+
+        <!-- 4-Step Tracker -->
+        <div class="stepper-container">
+          <div class="stepper-progress">
+            <div class="stepper-progress-bar" id="stepperProgressBar" style="width: 66%;"></div>
+          </div>
+
+          <div class="step-nodes">
+            <!-- Step 1: Reported -->
+            <div class="step-node completed" id="step-reported">
+              <div class="step-circle">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              </div>
+              <span class="step-title">Reported</span>
+              <span class="step-time">09:15 AM</span>
+            </div>
+
+            <!-- Step 2: Assigned -->
+            <div class="step-node completed" id="step-assigned">
+              <div class="step-circle">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              </div>
+              <span class="step-title">Assigned</span>
+              <span class="step-time">09:40 AM</span>
+            </div>
+
+            <!-- Step 3: In-Progress -->
+            <div class="step-node active" id="step-inprogress">
+              <div class="step-circle">
+                <div class="pulse-dot"></div>
+              </div>
+              <span class="step-title">In-Progress</span>
+              <span class="step-time">Truck #08 Dispatched</span>
+            </div>
+
+            <!-- Step 4: Resolved -->
+            <div class="step-node" id="step-resolved">
+              <div class="step-circle">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              </div>
+              <span class="step-title">Resolved</span>
+              <span class="step-time">Pending verification</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="step-details-box" id="stepDetailBox">
+          <div class="detail-badge in-progress-badge">Status: In-Progress</div>
+          <p id="stepDetailMessage">Sanitation Vehicle <strong>TRUCK-KA-04-892</strong> is currently en route to the site. Estimated cleanup completion in 35 minutes.</p>
+          <div class="swachhta-reward-banner hidden" id="complaintRewardBanner">
+            <div class="reward-banner-icon">🏅</div>
+            <div>
+              <strong>+10 Swachhta Points Awarded!</strong>
+              <span>This grievance has been resolved. 10 reward points were added to the citizen reporter's profile!</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Feedback Widget for Resolved Complaints -->
+        <div class="feedback-submission-box hidden" id="complaintFeedbackContainer" style="margin-top: 1.25rem; padding: 1.25rem; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+          <h4 style="font-size: 0.95rem; margin-bottom: 0.35rem; color: var(--color-green);">Citizen Resolution Feedback</h4>
+          <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.75rem;">This grievance has been resolved. Please rate the municipal resolution:</p>
+          <div id="feedbackStatusAlert" class="auth-alert hidden"></div>
+          <form id="complaintFeedbackForm">
+            <div class="form-row">
+              <div class="form-col">
+                <select id="feedbackRatingSelect" class="form-control" required>
+                  <option value="5" selected>★★★★★ 5 - Excellent</option>
+                  <option value="4">★★★★☆ 4 - Good</option>
+                  <option value="3">★★★☆☆ 3 - Average</option>
+                  <option value="2">★★☆☆☆ 2 - Below Average</option>
+                  <option value="1">★☆☆☆☆ 1 - Poor</option>
+                </select>
+              </div>
+              <div class="form-col">
+                <input type="text" id="feedbackCommentInput" class="form-control" placeholder="Optional comments...">
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm" style="margin-top: 0.75rem;">Submit Rating</button>
+          </form>
+          <div id="feedbackSubmittedView" class="hidden" style="margin-top: 0.5rem; font-size: 0.88rem;">
+            <span class="text-green" style="font-weight: 600;">✓ Feedback recorded:</span> <span id="feedbackRatingDisplay"></span>
+            <p id="feedbackCommentDisplay" style="color: var(--text-secondary); font-size: 0.82rem; margin-top: 0.25rem;"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Doorstep Pickup Request Section -->
+  <section class="section pickup-section" id="pickup">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag">Doorstep Service</span>
+        <h2 class="section-title">Schedule Special Waste Pickup</h2>
+        <p class="section-subtitle">Need disposal for bulky items, electronic waste, or renovation debris? Request a designated municipal pickup van right to your door.</p>
+      </div>
+
+      <div class="pickup-card">
+        <form id="pickupForm">
+          <div class="form-group">
+            <label for="pickupWasteType">Waste Type *</label>
+            <select id="pickupWasteType" class="form-control" required>
+              <option value="" disabled selected>Select special waste category</option>
+              <option value="E-Waste (Electronics, Batteries, Gadgets)">E-Waste (Electronics, Batteries, Gadgets)</option>
+              <option value="Bulky Household Furniture / Mattresses">Bulky Household Furniture / Mattresses</option>
+              <option value="Green / Garden / Pruning Waste">Green / Garden / Pruning Waste</option>
+              <option value="Construction & Demolition Debris">Construction & Demolition Debris</option>
+              <option value="Bulk Recyclable Plastics / Cardboard">Bulk Recyclable Plastics / Cardboard</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="pickupAddress">Pickup Address *</label>
+            <textarea id="pickupAddress" class="form-control" rows="2" placeholder="Building name, flat/house number, street and landmark..." required></textarea>
+          </div>
+
+          <div class="form-row">
+            <div class="form-col">
+              <div class="form-group">
+                <label for="pickupDate">Preferred Pickup Date *</label>
+                <input type="date" id="pickupDate" class="form-control" required>
+              </div>
+            </div>
+            <div class="form-col">
+              <div class="form-group">
+                <div class="location-header">
+                  <label for="pickupLocation">Locality / Ward *</label>
+                  <button type="button" id="detectPickupLocationBtn" class="btn btn-sm btn-ghost" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon-sm">
+                      <polygon points="3 11 22 2 13 21 11 13 3 11"/>
+                    </svg>
+                    Detect My Location
+                  </button>
+                </div>
+                <input type="text" id="pickupLocation" class="form-control" placeholder="e.g., Ward 07 - Koramangala" required>
+                <span class="field-hint" id="pickupLocHint"></span>
+              </div>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-block">Request Doorstep Pickup</button>
+        </form>
+
+        <div id="pickupSuccessAlert" class="alert-box alert-success hidden">
+          <h4>Pickup Request Scheduled!</h4>
+          <p>Our municipal specialized waste collection vehicle will visit your address on the scheduled date.</p>
+          <div class="alert-meta">
+            <span>Booking Ref: <strong id="pickupBookingId">PU-8821</strong></span>
+            <span>Slot: <strong>Morning (09:00 AM - 12:00 PM)</strong></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Waste Awareness Section -->
+  <section class="section awareness-section" id="awareness">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag">Citizen Guide</span>
+        <h2 class="section-title">Waste Segregation Awareness</h2>
+        <p class="section-subtitle">Source segregation is the foundation of a clean city. Sort your household waste into the correct bins to enable circular recycling.</p>
+      </div>
+
+      <div class="awareness-grid">
+        <!-- Wet Waste Card -->
+        <div class="awareness-card card-wet">
+          <div class="card-bin-badge green-badge">Green Bin</div>
+          <div class="card-icon-wrapper green-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2a9 9 0 0 1 9 9c0 4.97-4.03 9-9 9A9 9 0 0 1 3 11a9 9 0 0 1 9-9z"/>
+              <path d="M12 6v6l4 2"/>
+            </svg>
+          </div>
+          <h3 class="card-title">Wet Waste (Organic)</h3>
+          <p class="card-desc">Biodegradable organic waste from kitchens and gardens. Decomposes naturally into organic compost and clean bio-methane gas.</p>
+          <div class="items-list-block">
+            <strong>Includes:</strong>
+            <ul>
+              <li>Vegetable & fruit peels</li>
+              <li>Cooked leftover food & tea leaves</li>
+              <li>Eggshells & coffee grounds</li>
+              <li>Garden trimmings & leaves</li>
+            </ul>
+          </div>
+          <div class="card-footer-tip">
+            💡 <strong>Tip:</strong> Never line your wet waste bin with single-use plastic bags. Use newspaper or compostable liners.
+          </div>
+        </div>
+
+        <!-- Dry Waste Card -->
+        <div class="awareness-card card-dry">
+          <div class="card-bin-badge blue-badge">Blue Bin</div>
+          <div class="card-icon-wrapper blue-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="23 4 23 10 17 10"></polyline>
+              <polyline points="1 20 1 14 7 14"></polyline>
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+            </svg>
+          </div>
+          <h3 class="card-title">Dry Waste (Recyclable)</h3>
+          <p class="card-desc">Inorganic materials that do not decay and can be processed, cleaned, and remanufactured at city material recovery facilities.</p>
+          <div class="items-list-block">
+            <strong>Includes:</strong>
+            <ul>
+              <li>Paper, cartons & magazines</li>
+              <li>Plastic containers & rinsed bottles</li>
+              <li>Glass bottles & jars</li>
+              <li>Aluminium cans & clean metal foils</li>
+            </ul>
+          </div>
+          <div class="card-footer-tip">
+            💡 <strong>Tip:</strong> Always rinse milk pouches and food plastic containers before placing them in the dry bin.
+          </div>
+        </div>
+
+        <!-- Hazardous Waste Card -->
+        <div class="awareness-card card-hazard">
+          <div class="card-bin-badge red-badge">Red / Yellow Bin</div>
+          <div class="card-icon-wrapper red-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/>
+              <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+          </div>
+          <h3 class="card-title">Hazardous Waste (Toxic)</h3>
+          <p class="card-desc">Substances containing toxins, heavy metals, or infectious bio-matter that present severe dangers if dumped into regular landfills.</p>
+          <div class="items-list-block">
+            <strong>Includes:</strong>
+            <ul>
+              <li>Used batteries & mercury thermometers</li>
+              <li>Fluorescent tubes & CFL bulbs</li>
+              <li>Expired medicines & medical syringes</li>
+              <li>Chemical paints, solvents & insecticides</li>
+            </ul>
+          </div>
+          <div class="card-footer-tip">
+            💡 <strong>Tip:</strong> Wrap sharp blades and needles securely in paper and hand them directly to municipal hazardous collectors.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- AI Waste Assistant UI Section -->
+  <section class="section assistant-section" id="assistant">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag">Smart Civic Intelligence</span>
+        <h2 class="section-title">AI Waste Assistant</h2>
+        <p class="section-subtitle">Not sure where an item goes? Type what you're disposing of to get immediate bin classification and disposal guidance.</p>
+      </div>
+
+      <div class="assistant-card">
+        <div class="ai-input-group">
+          <label for="aiWasteInput" class="form-label" style="margin-bottom: 0.6rem;">What do you want to dispose of?</label>
+          <div class="input-with-button">
+            <input type="text" id="aiWasteInput" class="form-control" placeholder="e.g., coconut shells, expired tablet, plastic milk packet" value="Plastic Milk Packet">
+            <button type="button" id="aiAnalyzeBtn" class="btn btn-primary">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+              </svg>
+              Analyze Waste
+            </button>
+          </div>
+        </div>
+
+        <!-- Preset sample chips -->
+        <div class="sample-chips-bar">
+          <span class="chips-title">Quick Examples:</span>
+          <button type="button" class="chip-btn" data-query="Lithium-ion Battery">Lithium Battery</button>
+          <button type="button" class="chip-btn" data-query="Cardboard Pizza Box">Pizza Box</button>
+          <button type="button" class="chip-btn" data-query="Banana Peel">Banana Peel</button>
+          <button type="button" class="chip-btn" data-query="Broken Glass Bottle">Broken Glass</button>
+        </div>
+
+        <!-- Result Box (Pre-rendered dummy result for visual appeal) -->
+        <div class="ai-result-box" id="aiResultBox">
+          <div class="ai-result-header">
+            <span class="result-title" id="aiItemName">Plastic Milk Packet</span>
+            <span class="badge-status badge-blue" id="aiCategoryBadge">Dry Recyclable Waste</span>
+          </div>
+
+          <div class="ai-result-grid">
+            <div class="result-row">
+              <span class="result-label">Recommended Bin:</span>
+              <strong class="result-value text-blue" id="aiBinName">Blue Bin (Dry Waste)</strong>
+            </div>
+            <div class="result-row">
+              <span class="result-label">Recyclability:</span>
+              <span class="result-value text-green" id="aiRecyclability">High (Grade 4 LDPE Plastic)</span>
+            </div>
+            <div class="result-row">
+              <span class="result-label">Disposal Tip:</span>
+              <p class="result-tip" id="aiTip">Rinse thoroughly with water to remove milk residues before discarding. Cut only a tiny tip so both pouch and corner remain attached to prevent micro-littering.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container footer-container">
+      <div class="footer-col brand-col">
+        <a href="#hero" class="brand-logo footer-logo">
+          <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+          </svg>
+          <span>Prabhav <strong>Portal</strong></span>
+        </a>
+        <p class="footer-tagline">
+          Prabhav Portal Municipal Waste Platform &copy; 2026. Next-generation smart-city civic governance and resource circularity.
+        </p>
+        <div class="emergency-badge">
+          <span>📞 Sanitation Helpline: <strong>1800-PRABHAV</strong></span>
+        </div>
+      </div>
+
+      <div class="footer-col">
+        <h4 class="footer-heading">Citizen Services</h4>
+        <ul class="footer-links">
+          <li><a href="#report">Report Waste Grievance</a></li>
+          <li><a href="#track">Live Grievance Tracking</a></li>
+          <li><a href="#pickup">Doorstep Pickup Service</a></li>
+          <li><a href="#assistant">AI Waste Classification</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h4 class="footer-heading">Civic Resources</h4>
+        <ul class="footer-links">
+          <li><a href="#awareness">Waste Segregation Chart</a></li>
+          <li><a href="#awareness">Hazardous Material Safety</a></li>
+          <li><a href="admin.html">Municipal Officer Login</a></li>
+          <li><a href="#hero">City Sanitation Guidelines</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h4 class="footer-heading">Ward Coverage</h4>
+        <p class="footer-text">
+          Currently serving 48 wards across Central, North, and South Metropolitan municipal sectors.
+        </p>
+        <div class="system-status">
+          <span class="status-indicator"></span> Municipal Dispatch Grid: <strong>Operational</strong>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <div class="container footer-bottom-inner">
+        <span>Prabhav Portal Civic Tech Initiative &bull; Pure HTML, CSS, Vanilla JS.</span>
+        <span>Built for Clean Municipalities.</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Minimal Auth Modal (Login / Register) -->
+  <div class="auth-modal-backdrop hidden" id="authModal">
+    <div class="auth-modal-card">
+      <div class="auth-modal-header">
+        <div class="auth-tabs">
+          <button class="auth-tab-btn active" id="tabLoginBtn" type="button">Sign In</button>
+          <button class="auth-tab-btn" id="tabRegisterBtn" type="button">Register Citizen</button>
+        </div>
+        <button class="auth-close-btn" id="closeAuthModalBtn" type="button">&times;</button>
+      </div>
+
+      <!-- Alert notification inside modal -->
+      <div id="authAlert" class="auth-alert hidden"></div>
+
+      <!-- Login Form -->
+      <form id="loginForm" class="auth-form">
+        <div class="form-group">
+          <label for="loginEmail">Email Address</label>
+          <input type="email" id="loginEmail" class="form-control" placeholder="name@example.com" required>
+        </div>
+        <div class="form-group">
+          <label for="loginPassword">Password</label>
+          <input type="password" id="loginPassword" class="form-control" placeholder="Enter password" required>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Sign In</button>
+        <div class="auth-switch-note">
+          <span>Municipal Officer? <a href="admin.html">Sign In on Admin Portal &rarr;</a></span>
+        </div>
+      </form>
+
+      <!-- Register Form -->
+      <form id="registerForm" class="auth-form hidden">
+        <div class="form-group">
+          <label for="registerName">Full Name</label>
+          <input type="text" id="registerName" class="form-control" placeholder="e.g. Ramesh Kumar" required>
+        </div>
+        <div class="form-group">
+          <label for="registerEmail">Email Address</label>
+          <input type="email" id="registerEmail" class="form-control" placeholder="name@example.com" required>
+        </div>
+        <div class="form-group">
+          <label for="registerPassword">Password (min 6 characters)</label>
+          <input type="password" id="registerPassword" class="form-control" placeholder="Create secure password" required minlength="6">
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Create Citizen Account</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
