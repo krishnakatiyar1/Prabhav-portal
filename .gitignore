@@ -34,3 +34,6 @@ build/
 .cache/
 tmp/
 temp/
+.vercel/
+scratch/
+

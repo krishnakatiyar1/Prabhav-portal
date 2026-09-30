@@ -37,8 +37,54 @@ const pickupSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['Requested', 'Scheduled', 'Collected'],
+    enum: ['Requested', 'Scheduled', 'In-Transit', 'Collected', 'Completed', 'Cancelled'],
     default: 'Requested'
+  },
+  assignedVehicle: {
+    type: String,
+    default: 'VAN-SPEC-02'
+  },
+  truckNumber: {
+    type: String,
+    default: 'KA-01-EA-4920'
+  },
+  driverName: {
+    type: String,
+    default: 'Rajesh Kumar (Senior Crew)'
+  },
+  driverPhone: {
+    type: String,
+    default: '+91 98450 12890'
+  },
+  truckLocation: {
+    lat: {
+      type: Number,
+      default: 12.9650
+    },
+    lng: {
+      type: Number,
+      default: 77.5890
+    },
+    addressText: {
+      type: String,
+      default: 'Zonal Sanitation Depot, Indiranagar'
+    },
+    heading: {
+      type: Number,
+      default: 45
+    },
+    speedKmH: {
+      type: Number,
+      default: 26
+    },
+    lastUpdated: {
+      type: Date,
+      default: Date.now
+    }
+  },
+  etaMinutes: {
+    type: Number,
+    default: 18
   },
   createdAt: {
     type: Date,
@@ -50,4 +96,4 @@ const pickupSchema = new mongoose.Schema({
   }
 });
 
-module.exports = mongoose.model('Pickup', pickupSchema);
+module.exports = mongoose.models.Pickup || mongoose.model('Pickup', pickupSchema);

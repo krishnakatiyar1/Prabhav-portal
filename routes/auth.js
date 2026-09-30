@@ -44,10 +44,11 @@ router.post('/register', async (req, res) => {
 
     await newUser.save();
 
-    // Sign JWT
+    // Sign JWT (with fallback if JWT_SECRET is not configured in Vercel environment variables)
+    const jwtSecret = process.env.JWT_SECRET || 'prabhav_portal_jwt_secret_key_2026';
     const token = jwt.sign(
       { id: newUser._id, role: newUser.role },
-      process.env.JWT_SECRET,
+      jwtSecret,
       { expiresIn: '7d' }
     );
 
@@ -63,7 +64,14 @@ router.post('/register', async (req, res) => {
       }
     });
   } catch (err) {
-    return res.status(500).json({ error: 'Server error during registration.' });
+    console.error('Registration error:', err);
+    if (err.code === 11000) {
+      return res.status(400).json({ error: 'Email is already registered.' });
+    }
+    return res.status(500).json({
+      error: err.message || 'Server error during registration.',
+      details: err.name
+    });
   }
 });
 
@@ -88,10 +96,11 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'Invalid email or password.' });
     }
 
-    // Sign JWT
+    // Sign JWT (with fallback if JWT_SECRET is not configured in Vercel environment variables)
+    const jwtSecret = process.env.JWT_SECRET || 'prabhav_portal_jwt_secret_key_2026';
     const token = jwt.sign(
       { id: user._id, role: user.role },
-      process.env.JWT_SECRET,
+      jwtSecret,
       { expiresIn: '7d' }
     );
 
@@ -107,7 +116,11 @@ router.post('/login', async (req, res) => {
       }
     });
   } catch (err) {
-    return res.status(500).json({ error: 'Server error during login.' });
+    console.error('Login error:', err);
+    return res.status(500).json({
+      error: err.message || 'Server error during login.',
+      details: err.name
+    });
   }
 });
 

@@ -52,6 +52,14 @@ const complaintSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  resolvedImageUrl: {
+    type: String,
+    default: ''
+  },
+  adminRemarks: {
+    type: String,
+    default: ''
+  },
   status: {
     type: String,
     enum: ['Reported', 'Assigned', 'In-Progress', 'Resolved'],
@@ -80,4 +88,4 @@ const complaintSchema = new mongoose.Schema({
   }
 });
 
-module.exports = mongoose.model('Complaint', complaintSchema);
+module.exports = mongoose.models.Complaint || mongoose.model('Complaint', complaintSchema);

@@ -127,12 +127,8 @@ router.get('/:id', async (req, res) => {
 // PATCH /api/complaints/:id/status - Update complaint status (Admin only)
 router.patch('/:id/status', authMiddleware, adminMiddleware, async (req, res) => {
   try {
-    const { status } = req.body;
+    let { status, resolvedImageUrl, adminRemarks } = req.body;
     const validStatuses = ['Reported', 'Assigned', 'In-Progress', 'Resolved'];
-
-    if (!status || !validStatuses.includes(status)) {
-      return res.status(400).json({ error: `Invalid status. Must be one of: ${validStatuses.join(', ')}` });
-    }
 
     const query = req.params.id;
     let complaint = await Complaint.findOne({ complaintId: query.toUpperCase() });
@@ -142,6 +138,33 @@ router.patch('/:id/status', authMiddleware, adminMiddleware, async (req, res) =>
 
     if (!complaint) {
       return res.status(404).json({ error: 'Complaint not found.' });
+    }
+
+    // If status is not provided, keep current complaint status (e.g. updating remarks only)
+    if (!status) {
+      status = complaint.status;
+    }
+
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ error: `Invalid status. Must be one of: ${validStatuses.join(', ')}` });
+    }
+
+    // Require an 'After' resolution photo proof when resolving a complaint
+    if (status === 'Resolved') {
+      const hasAfterPhoto = (resolvedImageUrl && typeof resolvedImageUrl === 'string' && resolvedImageUrl.trim().length > 0) || complaint.resolvedImageUrl;
+      if (!hasAfterPhoto) {
+        return res.status(400).json({
+          error: "An 'After' resolution photo proof is required to mark this grievance as Resolved."
+        });
+      }
+    }
+
+    if (resolvedImageUrl && typeof resolvedImageUrl === 'string') {
+      complaint.resolvedImageUrl = resolvedImageUrl;
+    }
+
+    if (typeof adminRemarks === 'string') {
+      complaint.adminRemarks = adminRemarks.trim();
     }
 
     let pointsAwarded = false;

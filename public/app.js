@@ -119,16 +119,100 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // File upload indicator
+  // Helper to read and optimize uploaded image to web-ready JPEG base64 Data URL
+  function compressAndEncodeImage(file) {
+    return new Promise((resolve) => {
+      if (!file || !file.type.startsWith("image/")) {
+        return resolve("");
+      }
+      const reader = new FileReader();
+      reader.onerror = () => resolve("");
+      reader.onload = (e) => {
+        const rawDataUrl = e.target.result;
+        const img = new Image();
+        img.onerror = () => resolve(rawDataUrl);
+        img.onload = () => {
+          try {
+            const MAX_DIM = 1200;
+            let width = img.width;
+            let height = img.height;
+            if (width > MAX_DIM || height > MAX_DIM) {
+              if (width > height) {
+                height = Math.round((height * MAX_DIM) / width);
+                width = MAX_DIM;
+              } else {
+                width = Math.round((width * MAX_DIM) / height);
+                height = MAX_DIM;
+              }
+            }
+            const canvas = document.createElement("canvas");
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(img, 0, 0, width, height);
+            const optimizedDataUrl = canvas.toDataURL("image/jpeg", 0.82);
+            resolve(optimizedDataUrl);
+          } catch (err) {
+            resolve(rawDataUrl);
+          }
+        };
+        img.src = rawDataUrl;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // File upload state & preview elements
+  let currentReportPhotoBase64 = "";
   const reportPhoto = document.getElementById("reportPhoto");
   const uploadText = document.getElementById("uploadText");
+  const fileDummyLabel = document.getElementById("fileDummyLabel");
+  const filePreviewWrap = document.getElementById("filePreviewWrap");
+  const filePreviewThumb = document.getElementById("filePreviewThumb");
+  const filePreviewName = document.getElementById("filePreviewName");
+  const filePreviewSize = document.getElementById("filePreviewSize");
+  const removePhotoBtn = document.getElementById("removePhotoBtn");
 
-  if (reportPhoto && uploadText) {
-    reportPhoto.addEventListener("change", (e) => {
+  function resetPhotoUploadUI() {
+    currentReportPhotoBase64 = "";
+    if (reportPhoto) reportPhoto.value = "";
+    if (filePreviewWrap) filePreviewWrap.classList.add("hidden");
+    if (fileDummyLabel) fileDummyLabel.classList.remove("hidden");
+    if (uploadText) {
+      uploadText.textContent = "Click or drag photo to upload (PNG, JPG, WebP)";
+      uploadText.style.color = "var(--text-secondary)";
+    }
+  }
+
+  if (reportPhoto) {
+    reportPhoto.addEventListener("change", async (e) => {
       if (e.target.files && e.target.files.length > 0) {
-        uploadText.textContent = `Attached: ${e.target.files[0].name} (Ready to upload)`;
-        uploadText.style.color = "var(--color-green)";
+        const file = e.target.files[0];
+        const sizeKb = Math.round(file.size / 1024);
+        if (uploadText) {
+          uploadText.textContent = `Optimizing: ${file.name}...`;
+        }
+
+        const dataUrl = await compressAndEncodeImage(file);
+        currentReportPhotoBase64 = dataUrl;
+
+        if (filePreviewThumb) filePreviewThumb.src = dataUrl;
+        if (filePreviewName) filePreviewName.textContent = file.name;
+        if (filePreviewSize) filePreviewSize.textContent = `${sizeKb} KB (Ready)`;
+
+        if (filePreviewWrap) filePreviewWrap.classList.remove("hidden");
+        if (fileDummyLabel) fileDummyLabel.classList.add("hidden");
+      } else {
+        resetPhotoUploadUI();
       }
+    });
+  }
+
+  if (removePhotoBtn) {
+    removePhotoBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      resetPhotoUploadUI();
     });
   }
 
@@ -168,7 +252,12 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       const isAnonymous = document.getElementById("reportAnon") ? document.getElementById("reportAnon").checked : false;
-      const imageUrl = (reportPhoto && reportPhoto.files && reportPhoto.files.length > 0) ? reportPhoto.files[0].name : '';
+
+      // Ensure image is processed if user selected file right before submitting
+      if (!currentReportPhotoBase64 && reportPhoto && reportPhoto.files && reportPhoto.files.length > 0) {
+        currentReportPhotoBase64 = await compressAndEncodeImage(reportPhoto.files[0]);
+      }
+      const imageUrl = currentReportPhotoBase64 || '';
 
       try {
         const response = await fetch("/api/complaints", {
@@ -220,13 +309,10 @@ document.addEventListener("DOMContentLoaded", () => {
         reportSuccessAlert.classList.remove("hidden");
         reportSuccessAlert.scrollIntoView({ behavior: "smooth", block: "nearest" });
 
-        // Reset input fields
+        // Reset input fields and photo preview
         reportWasteForm.reset();
+        resetPhotoUploadUI();
         loadCitizenStats();
-        if (uploadText) {
-          uploadText.textContent = "Click or drag photo to upload (PNG, JPG)";
-          uploadText.style.color = "var(--text-secondary)";
-        }
       } catch (err) {
         alert("Network error: Could not submit complaint to server.");
       }
@@ -269,6 +355,28 @@ document.addEventListener("DOMContentLoaded", () => {
       if (trackCategory) trackCategory.textContent = complaint.category;
       if (trackLocation) trackLocation.textContent = complaint.locationText || `${complaint.coordinates.lat.toFixed(4)}, ${complaint.coordinates.lng.toFixed(4)}`;
       if (trackUpdated) trackUpdated.textContent = new Date(complaint.updatedAt || complaint.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      // Evidence Photo in Citizen Tracker
+      const trackPhotoItem = document.getElementById("trackPhotoItem");
+      const trackPhotoImg = document.getElementById("trackPhotoImg");
+      const trackPhotoExpandBtn = document.getElementById("trackPhotoExpandBtn");
+      if (trackPhotoItem && trackPhotoImg) {
+        const hasPhoto = complaint.imageUrl && (complaint.imageUrl.startsWith("data:image") || complaint.imageUrl.startsWith("http") || complaint.imageUrl.length > 50);
+        if (hasPhoto) {
+          trackPhotoImg.src = complaint.imageUrl;
+          trackPhotoItem.classList.remove("hidden");
+          const viewPhotoPopup = () => {
+            const w = window.open("");
+            if (w) {
+              w.document.write(`<title>Evidence Photo: ${complaint.complaintId}</title><body style="margin:0; background:#0b1120; display:flex; align-items:center; justify-content:center; min-height:100vh;"><img src="${complaint.imageUrl}" style="max-width:95%; max-height:95vh; object-fit:contain; border-radius:8px; box-shadow:0 10px 30px rgba(0,0,0,0.5);" alt="Evidence"/></body>`);
+            }
+          };
+          trackPhotoImg.onclick = viewPhotoPopup;
+          if (trackPhotoExpandBtn) trackPhotoExpandBtn.onclick = viewPhotoPopup;
+        } else {
+          trackPhotoItem.classList.add("hidden");
+        }
+      }
 
       // Step mapping
       const statusStepMap = {
@@ -329,6 +437,74 @@ document.addEventListener("DOMContentLoaded", () => {
           stepDetailMessage.innerHTML = `Sanitation vehicle dispatched. Cleanup crew active on site.`;
         } else if (complaint.status === 'Resolved') {
           stepDetailMessage.innerHTML = `Municipal waste cleared successfully and area sanitized.`;
+        }
+      }
+
+      // Connect Municipal Action & Resolution Proof Showcase (Before & After Photos + Remarks)
+      const resolutionCard = document.getElementById("resolutionShowcaseCard");
+      const trackBeforeImg = document.getElementById("trackBeforeImg");
+      const trackNoBeforeImg = document.getElementById("trackNoBeforeImg");
+      const trackAfterImg = document.getElementById("trackAfterImg");
+      const trackNoAfterImg = document.getElementById("trackNoAfterImg");
+      const adminRemarksBox = document.getElementById("adminRemarksBox");
+      const trackAdminRemarksText = document.getElementById("trackAdminRemarksText");
+      const resolutionTimestamp = document.getElementById("resolutionTimestamp");
+
+      if (resolutionCard) {
+        const isResolved = complaint.status === 'Resolved';
+        const hasAfterPhoto = complaint.resolvedImageUrl && (complaint.resolvedImageUrl.startsWith("data:image") || complaint.resolvedImageUrl.startsWith("http") || complaint.resolvedImageUrl.length > 50);
+        const hasRemarks = complaint.adminRemarks && complaint.adminRemarks.trim().length > 0;
+
+        if (isResolved || hasAfterPhoto || hasRemarks) {
+          resolutionCard.classList.remove("hidden");
+
+          if (resolutionTimestamp) {
+            resolutionTimestamp.textContent = isResolved
+              ? `Resolved & Site Cleared on ${new Date(complaint.updatedAt || complaint.createdAt).toLocaleDateString()} at ${new Date(complaint.updatedAt || complaint.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+              : `Dispatched & Active In Field`;
+          }
+
+          // Before Photo
+          if (complaint.imageUrl && (complaint.imageUrl.startsWith("data:image") || complaint.imageUrl.startsWith("http") || complaint.imageUrl.length > 50)) {
+            if (trackBeforeImg) {
+              trackBeforeImg.src = complaint.imageUrl;
+              trackBeforeImg.classList.remove("hidden");
+              trackBeforeImg.onclick = () => {
+                const w = window.open("");
+                if (w) w.document.write(`<title>Before Photo: ${complaint.complaintId}</title><body style="margin:0; background:#0b1120; display:flex; align-items:center; justify-content:center; min-height:100vh;"><img src="${complaint.imageUrl}" style="max-width:95%; max-height:95vh; object-fit:contain; border-radius:8px;" alt="Before Evidence"/></body>`);
+              };
+            }
+            if (trackNoBeforeImg) trackNoBeforeImg.classList.add("hidden");
+          } else {
+            if (trackBeforeImg) trackBeforeImg.classList.add("hidden");
+            if (trackNoBeforeImg) trackNoBeforeImg.classList.remove("hidden");
+          }
+
+          // After Photo (Proof of Cleanup uploaded by Admin)
+          if (hasAfterPhoto) {
+            if (trackAfterImg) {
+              trackAfterImg.src = complaint.resolvedImageUrl;
+              trackAfterImg.classList.remove("hidden");
+              trackAfterImg.onclick = () => {
+                const w = window.open("");
+                if (w) w.document.write(`<title>Resolution Proof (After): ${complaint.complaintId}</title><body style="margin:0; background:#0b1120; display:flex; align-items:center; justify-content:center; min-height:100vh;"><img src="${complaint.resolvedImageUrl}" style="max-width:95%; max-height:95vh; object-fit:contain; border-radius:8px;" alt="Resolution Proof"/></body>`);
+              };
+            }
+            if (trackNoAfterImg) trackNoAfterImg.classList.add("hidden");
+          } else {
+            if (trackAfterImg) trackAfterImg.classList.add("hidden");
+            if (trackNoAfterImg) trackNoAfterImg.classList.remove("hidden");
+          }
+
+          // Admin Action Remarks / Custom Text
+          if (hasRemarks && adminRemarksBox && trackAdminRemarksText) {
+            trackAdminRemarksText.textContent = `"${complaint.adminRemarks}"`;
+            adminRemarksBox.classList.remove("hidden");
+          } else if (adminRemarksBox) {
+            adminRemarksBox.classList.add("hidden");
+          }
+        } else {
+          resolutionCard.classList.add("hidden");
         }
       }
 
@@ -425,6 +601,301 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* ==========================================================================
+     4B. Doorstep Waste Pickup & Live Truck Radar Tracker
+     ========================================================================== */
+  const trackPickupForm = document.getElementById("trackPickupForm");
+  const trackPickupInput = document.getElementById("trackPickupInput");
+  const trackPickupId = document.getElementById("trackPickupId");
+  const trackPickupWasteType = document.getElementById("trackPickupWasteType");
+  const trackPickupAddress = document.getElementById("trackPickupAddress");
+  const trackPickupDate = document.getElementById("trackPickupDate");
+  const pickupStepperProgressBar = document.getElementById("pickupStepperProgressBar");
+  const pickupStepRequested = document.getElementById("pickup-step-requested");
+  const pickupStepScheduled = document.getElementById("pickup-step-scheduled");
+  const pickupStepIntransit = document.getElementById("pickup-step-intransit");
+  const pickupStepCollected = document.getElementById("pickup-step-collected");
+  const pickupStatusBadge = document.getElementById("pickupStatusBadge");
+  const pickupStepDetailMessage = document.getElementById("pickupStepDetailMessage");
+  const pickupTruckName = document.getElementById("pickupTruckName");
+  const pickupEtaValue = document.getElementById("pickupEtaValue");
+  const pickupDriverName = document.getElementById("pickupDriverName");
+  const pickupTruckPlate = document.getElementById("pickupTruckPlate");
+  const pickupTelemetryText = document.getElementById("pickupTelemetryText");
+  const pickupDriverCallBtn = document.getElementById("pickupDriverCallBtn");
+  const pickupDriverPhone = document.getElementById("pickupDriverPhone");
+  const pickupLiveStatusPill = document.getElementById("pickupLiveStatusPill");
+
+  let pickupTruckMapInstance = null;
+  let pickupTruckMapLayerGroup = null;
+  let currentTrackedPickup = null;
+
+  async function updatePickupTrackerUI(pickupId) {
+    if (!pickupId) return;
+    try {
+      const res = await fetch(`/api/pickups/${encodeURIComponent(pickupId)}`);
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error || "Pickup ID not found in municipal registry.");
+        return;
+      }
+
+      const p = data.pickup;
+      currentTrackedPickup = p;
+
+      if (trackPickupId) trackPickupId.textContent = p.pickupId;
+      if (trackPickupWasteType) trackPickupWasteType.textContent = p.wasteType || 'Special Waste';
+      if (trackPickupAddress) trackPickupAddress.textContent = p.address || 'Doorstep Address';
+      if (trackPickupDate) {
+        trackPickupDate.textContent = p.scheduledDate
+          ? new Date(p.scheduledDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+          : 'Pending schedule';
+      }
+
+      // 4-Step Stepper mapping
+      // Steps: 1: Requested, 2: Scheduled, 3: In-Transit, 4: Collected/Completed
+      const statusMap = {
+        'Requested': 1,
+        'Scheduled': 2,
+        'In-Transit': 3,
+        'Collected': 4,
+        'Completed': 4
+      };
+      const currentStep = statusMap[p.status] || (p.status === 'Requested' ? 1 : 2);
+
+      const allPickupSteps = [pickupStepRequested, pickupStepScheduled, pickupStepIntransit, pickupStepCollected];
+      allPickupSteps.forEach((s) => {
+        if (s) {
+          s.classList.remove("completed", "active");
+          const pulse = s.querySelector(".pulse-dot");
+          if (pulse) pulse.remove();
+        }
+      });
+
+      if (currentStep >= 1 && pickupStepRequested) pickupStepRequested.classList.add(currentStep === 1 ? "active" : "completed");
+      if (currentStep >= 2 && pickupStepScheduled) pickupStepScheduled.classList.add(currentStep === 2 ? "active" : "completed");
+      if (currentStep >= 3 && pickupStepIntransit) pickupStepIntransit.classList.add(currentStep === 3 ? "active" : "completed");
+      if (currentStep >= 4 && pickupStepCollected) pickupStepCollected.classList.add("completed");
+
+      const activePickupStepNode = allPickupSteps[currentStep - 1];
+      if (activePickupStepNode && currentStep < 4) {
+        const circle = activePickupStepNode.querySelector(".step-circle");
+        if (circle && !circle.querySelector(".pulse-dot")) {
+          const dot = document.createElement("div");
+          dot.className = "pulse-dot";
+          circle.appendChild(dot);
+        }
+      }
+
+      if (pickupStepperProgressBar) {
+        const pcts = { 1: "0%", 2: "33%", 3: "66%", 4: "100%" };
+        pickupStepperProgressBar.style.width = pcts[currentStep] || "0%";
+      }
+
+      // Status Badge and Detail Message
+      if (pickupStatusBadge) {
+        pickupStatusBadge.textContent = `Status: ${p.status}`;
+        pickupStatusBadge.className = `detail-badge ${p.status === 'Collected' || p.status === 'Completed' ? 'badge-green' : (p.status === 'In-Transit' || p.status === 'Scheduled') ? 'in-progress-badge' : 'badge-amber'}`;
+      }
+
+      if (pickupStepDetailMessage) {
+        if (p.status === 'Requested') {
+          pickupStepDetailMessage.innerHTML = `Pickup request <strong>${p.pickupId}</strong> is logged. Dispatch team is assigning a specialized municipal vehicle.`;
+        } else if (p.status === 'Scheduled') {
+          pickupStepDetailMessage.innerHTML = `Collection vehicle <strong>${p.assignedVehicle || 'VAN-SPEC-02'}</strong> scheduled. Route preparation in progress for your slot.`;
+        } else if (p.status === 'In-Transit') {
+          pickupStepDetailMessage.innerHTML = `Municipal Sanitation Truck <strong>${p.assignedVehicle || 'VAN-SPEC-02'}</strong> is on the road and en route to your address.`;
+        } else if (p.status === 'Collected' || p.status === 'Completed') {
+          pickupStepDetailMessage.innerHTML = `Special waste loaded and collected successfully from your doorstep by crew lead <strong>${p.driverName || 'Municipal Team'}</strong>.`;
+        }
+      }
+
+      // Telemetry & Crew details
+      const vehicleName = p.assignedVehicle || 'VAN-SPEC-02';
+      const plate = p.truckNumber || 'KA-01-EA-4920';
+      if (pickupTruckName) pickupTruckName.textContent = `${vehicleName} (${plate})`;
+      if (pickupTruckPlate) pickupTruckPlate.textContent = plate;
+      if (pickupDriverName) pickupDriverName.textContent = p.driverName || 'Rajesh Kumar (Senior Crew Lead)';
+      if (pickupDriverPhone) pickupDriverPhone.textContent = p.driverPhone || '+91 98450 12890';
+      if (pickupDriverCallBtn) pickupDriverCallBtn.href = `tel:${(p.driverPhone || '+919845012890').replace(/\s+/g, '')}`;
+
+      const eta = p.etaMinutes ?? 14;
+      const dist = p.distanceKm ?? 1.8;
+      if (pickupEtaValue) {
+        if (p.status === 'Collected' || p.status === 'Completed') {
+          pickupEtaValue.textContent = 'Collected & Cleared';
+        } else if (p.status === 'Requested') {
+          pickupEtaValue.textContent = 'Awaiting Dispatch';
+        } else {
+          pickupEtaValue.textContent = `${eta} mins (${dist} km away)`;
+        }
+      }
+
+      if (pickupTelemetryText) {
+        if (p.status === 'Collected' || p.status === 'Completed') {
+          pickupTelemetryText.textContent = 'Waste was safely transferred to the regional sorting facility.';
+        } else if (p.status === 'Requested') {
+          pickupTelemetryText.textContent = 'Vehicle will be dispatched from Zonal Depot on the scheduled date.';
+        } else {
+          pickupTelemetryText.textContent = `Cruising at ${p.truckLocation?.speedKmH || 26} km/h towards ${p.address || 'doorstep'}. Please keep bulky items accessible.`;
+        }
+      }
+
+      if (pickupLiveStatusPill) {
+        if (p.status === 'Collected' || p.status === 'Completed') {
+          pickupLiveStatusPill.className = 'crew-status-pill badge-green';
+          pickupLiveStatusPill.textContent = 'Pickup Completed';
+        } else if (p.status === 'Requested') {
+          pickupLiveStatusPill.className = 'crew-status-pill badge-amber';
+          pickupLiveStatusPill.textContent = 'Awaiting Dispatch';
+        } else {
+          pickupLiveStatusPill.className = 'crew-status-pill badge-green';
+          pickupLiveStatusPill.textContent = 'Live GPS Active';
+        }
+      }
+
+      // Render Leaflet Truck Map
+      renderPickupTruckMap(p);
+
+    } catch (err) {
+      console.warn("Error tracking pickup:", err);
+    }
+  }
+
+  // Render Interactive Leaflet Map for Truck and Doorstep
+  function renderPickupTruckMap(pickup) {
+    const mapContainer = document.getElementById("pickupTruckMap");
+    if (!mapContainer || typeof L === 'undefined') return;
+
+    const destLat = (pickup.coordinates && typeof pickup.coordinates.lat === 'number') ? pickup.coordinates.lat : 12.9716;
+    const destLng = (pickup.coordinates && typeof pickup.coordinates.lng === 'number') ? pickup.coordinates.lng : 77.5946;
+
+    let truckLat = (pickup.truckLocation && typeof pickup.truckLocation.lat === 'number') ? pickup.truckLocation.lat : (destLat - 0.012);
+    let truckLng = (pickup.truckLocation && typeof pickup.truckLocation.lng === 'number') ? pickup.truckLocation.lng : (destLng - 0.009);
+
+    if (pickup.status === 'Collected' || pickup.status === 'Completed') {
+      truckLat = destLat;
+      truckLng = destLng;
+    }
+
+    if (!pickupTruckMapInstance) {
+      pickupTruckMapInstance = L.map('pickupTruckMap', { zoomControl: true }).setView([destLat, destLng], 14);
+      L.tileLayer(OSM_TILE_URL, OSM_TILE_OPTIONS).addTo(pickupTruckMapInstance);
+      pickupTruckMapLayerGroup = L.layerGroup().addTo(pickupTruckMapInstance);
+    } else {
+      pickupTruckMapLayerGroup.clearLayers();
+    }
+
+    // Doorstep Pin (Home/Green)
+    const doorstepIcon = L.divIcon({
+      className: 'leaflet-doorstep-pin-container',
+      html: `
+        <div class="leaflet-doorstep-pin-icon" title="Your Doorstep">
+          🏠
+        </div>
+      `,
+      iconSize: [32, 32],
+      iconAnchor: [16, 16],
+      popupAnchor: [0, -16]
+    });
+
+    const doorstepMarker = L.marker([destLat, destLng], { icon: doorstepIcon })
+      .bindPopup(`
+        <div style="font-family:Inter,sans-serif; font-size:12px; color:#0f172a; padding:2px;">
+          <strong style="color:#059669;">🏠 Your Doorstep Pickup Point</strong><br>
+          <span>${pickup.address}</span><br>
+          <small style="color:#64748b;">Waste: ${pickup.wasteType}</small>
+        </div>
+      `);
+    pickupTruckMapLayerGroup.addLayer(doorstepMarker);
+
+    // Truck Pin (Van/Blue with animated pulse)
+    const truckIcon = L.divIcon({
+      className: 'leaflet-truck-pin-container',
+      html: `
+        <div class="leaflet-truck-pin-pulse"></div>
+        <div class="leaflet-truck-pin-icon" title="Municipal Sanitation Truck">
+          🚛
+        </div>
+      `,
+      iconSize: [44, 44],
+      iconAnchor: [22, 22],
+      popupAnchor: [0, -22]
+    });
+
+    const truckMarker = L.marker([truckLat, truckLng], { icon: truckIcon })
+      .bindPopup(`
+        <div style="font-family:Inter,sans-serif; font-size:12px; color:#0f172a; padding:2px;">
+          <strong style="color:#0284c7;">🚛 ${pickup.assignedVehicle || 'Sanitation Truck'}</strong><br>
+          <span>Plate: <code>${pickup.truckNumber || 'KA-01-EA-4920'}</code></span><br>
+          <span>Driver: ${pickup.driverName || 'Rajesh Kumar'}</span><br>
+          <small style="color:#64748b;">${pickup.status === 'Collected' ? 'At destination' : 'En-route to doorstep'}</small>
+        </div>
+      `);
+    pickupTruckMapLayerGroup.addLayer(truckMarker);
+
+    // Connect with dashed polyline route
+    if (pickup.status !== 'Collected' && pickup.status !== 'Completed') {
+      const routePolyline = L.polyline([
+        [truckLat, truckLng],
+        [destLat, destLng]
+      ], {
+        color: '#0284c7',
+        weight: 3.5,
+        dashArray: '6, 8',
+        opacity: 0.85
+      });
+      pickupTruckMapLayerGroup.addLayer(routePolyline);
+    }
+
+    // Fit bounds to show both truck and destination nicely
+    const bounds = L.latLngBounds([[destLat, destLng], [truckLat, truckLng]]);
+    pickupTruckMapInstance.fitBounds(bounds, { padding: [35, 35], maxZoom: 15 });
+
+    setTimeout(() => {
+      if (pickupTruckMapInstance) pickupTruckMapInstance.invalidateSize();
+    }, 250);
+  }
+
+  // Quick Chips & Form Event Listeners
+  if (trackPickupForm && trackPickupInput) {
+    trackPickupForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const enteredId = trackPickupInput.value.trim().toUpperCase();
+      if (enteredId) {
+        updatePickupTrackerUI(enteredId);
+      }
+    });
+  }
+
+  document.querySelectorAll(".chip-pickup").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const pid = btn.getAttribute("data-id");
+      if (pid && trackPickupInput) {
+        trackPickupInput.value = pid;
+        updatePickupTrackerUI(pid);
+      }
+    });
+  });
+
+  document.querySelectorAll(".chip-complaint").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const cid = btn.getAttribute("data-id");
+      if (cid && trackInput) {
+        trackInput.value = cid;
+        updateTrackerUI(cid);
+      }
+    });
+  });
+
+  window.trackPickupRef = (pid) => {
+    if (trackPickupInput) trackPickupInput.value = pid;
+    updatePickupTrackerUI(pid);
+    const sec = document.getElementById("track");
+    if (sec) sec.scrollIntoView({ behavior: "smooth" });
+  };
+
+  /* ==========================================================================
      5. Doorstep Pickup Request Submission Handler (Connected to POST /api/pickups)
      ========================================================================== */
   const pickupForm = document.getElementById("pickupForm");
@@ -469,13 +940,21 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         if (pickupBookingId) {
-          pickupBookingId.textContent = data.pickup.pickupId;
+          pickupBookingId.innerHTML = `${data.pickup.pickupId} &nbsp;&bull;&nbsp; <button type="button" class="btn btn-sm btn-ghost" style="text-decoration:underline; font-weight:700; color:var(--primary); padding:2px 8px; font-size:11px; margin-left:4px; cursor:pointer;" onclick="window.trackPickupRef && window.trackPickupRef('${data.pickup.pickupId}')">Track Van Live ➔</button>`;
         }
 
         pickupSuccessAlert.classList.remove("hidden");
         pickupSuccessAlert.scrollIntoView({ behavior: "smooth", block: "nearest" });
         pickupForm.reset();
         loadCitizenStats();
+
+        // Also auto-load this newly requested pickup into the truck tracker column
+        if (trackPickupInput) {
+          trackPickupInput.value = data.pickup.pickupId;
+        }
+        if (typeof updatePickupTrackerUI === 'function') {
+          updatePickupTrackerUI(data.pickup.pickupId);
+        }
       } catch (err) {
         alert("Network error: Could not schedule pickup with server.");
       }
@@ -690,14 +1169,330 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  // Cache loaded complaints for inspection & resolution modals
+  let adminLoadedComplaints = [];
+
+  // ==========================================================================
+  // Resolution Proof Modal Logic (Required 'After' Photo + Custom Remarks)
+  // ==========================================================================
+  let currentResolveAfterPhotoBase64 = "";
+  let activeResolveComplaintId = null;
+
+  const resolveComplaintModal = document.getElementById("resolveComplaintModal");
+  const closeResolveModalBtn = document.getElementById("closeResolveModalBtn");
+  const cancelResolveBtn = document.getElementById("cancelResolveBtn");
+  const resolveComplaintForm = document.getElementById("resolveComplaintForm");
+  const resolveTargetId = document.getElementById("resolveTargetId");
+  const resolveTargetCategory = document.getElementById("resolveTargetCategory");
+  const resolveTargetLocation = document.getElementById("resolveTargetLocation");
+  const resolveAfterPhotoInput = document.getElementById("resolveAfterPhotoInput");
+  const afterPhotoDummyLabel = document.getElementById("afterPhotoDummyLabel");
+  const afterPhotoPreviewWrap = document.getElementById("afterPhotoPreviewWrap");
+  const afterPhotoPreviewThumb = document.getElementById("afterPhotoPreviewThumb");
+  const afterPhotoPreviewName = document.getElementById("afterPhotoPreviewName");
+  const afterPhotoPreviewSize = document.getElementById("afterPhotoPreviewSize");
+  const removeAfterPhotoBtn = document.getElementById("removeAfterPhotoBtn");
+  const resolveRemarksInput = document.getElementById("resolveRemarksInput");
+  const resolveAlert = document.getElementById("resolveAlert");
+
+  function resetResolveModalUI() {
+    currentResolveAfterPhotoBase64 = "";
+    activeResolveComplaintId = null;
+    if (resolveAfterPhotoInput) resolveAfterPhotoInput.value = "";
+    if (afterPhotoPreviewWrap) afterPhotoPreviewWrap.classList.add("hidden");
+    if (afterPhotoDummyLabel) afterPhotoDummyLabel.classList.remove("hidden");
+    if (resolveRemarksInput) resolveRemarksInput.value = "";
+    if (resolveAlert) {
+      resolveAlert.classList.add("hidden");
+      resolveAlert.textContent = "";
+    }
+  }
+
+  function openResolveComplaintModal(complaintId) {
+    const c = adminLoadedComplaints.find(item => item.complaintId === complaintId);
+    if (!c) return;
+
+    resetResolveModalUI();
+    activeResolveComplaintId = complaintId;
+
+    if (resolveTargetId) resolveTargetId.textContent = c.complaintId;
+    if (resolveTargetCategory) resolveTargetCategory.textContent = c.category;
+    if (resolveTargetLocation) resolveTargetLocation.textContent = c.locationText || c.title || 'Geotagged Location';
+    if (resolveRemarksInput) resolveRemarksInput.value = c.adminRemarks || '';
+
+    // If complaint already has an After photo proof, preload it into the preview
+    if (c.resolvedImageUrl && (c.resolvedImageUrl.startsWith("data:image") || c.resolvedImageUrl.startsWith("http") || c.resolvedImageUrl.length > 50)) {
+      currentResolveAfterPhotoBase64 = c.resolvedImageUrl;
+      if (afterPhotoPreviewThumb) afterPhotoPreviewThumb.src = c.resolvedImageUrl;
+      if (afterPhotoPreviewName) afterPhotoPreviewName.textContent = "Current 'After' Proof";
+      if (afterPhotoPreviewSize) afterPhotoPreviewSize.textContent = "Attached";
+      if (afterPhotoPreviewWrap) afterPhotoPreviewWrap.classList.remove("hidden");
+      if (afterPhotoDummyLabel) afterPhotoDummyLabel.classList.add("hidden");
+    }
+
+    if (resolveComplaintModal) resolveComplaintModal.classList.remove("hidden");
+  }
+
+  // Handle 'After' photo file selection
+  if (resolveAfterPhotoInput) {
+    resolveAfterPhotoInput.addEventListener("change", async (e) => {
+      if (e.target.files && e.target.files.length > 0) {
+        const file = e.target.files[0];
+        const sizeKb = Math.round(file.size / 1024);
+        const dataUrl = await compressAndEncodeImage(file);
+        currentResolveAfterPhotoBase64 = dataUrl;
+
+        if (afterPhotoPreviewThumb) afterPhotoPreviewThumb.src = dataUrl;
+        if (afterPhotoPreviewName) afterPhotoPreviewName.textContent = file.name;
+        if (afterPhotoPreviewSize) afterPhotoPreviewSize.textContent = `${sizeKb} KB (Ready)`;
+        if (afterPhotoPreviewWrap) afterPhotoPreviewWrap.classList.remove("hidden");
+        if (afterPhotoDummyLabel) afterPhotoDummyLabel.classList.add("hidden");
+      }
+    });
+  }
+
+  if (removeAfterPhotoBtn) {
+    removeAfterPhotoBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      currentResolveAfterPhotoBase64 = "";
+      if (resolveAfterPhotoInput) resolveAfterPhotoInput.value = "";
+      if (afterPhotoPreviewWrap) afterPhotoPreviewWrap.classList.add("hidden");
+      if (afterPhotoDummyLabel) afterPhotoDummyLabel.classList.remove("hidden");
+    });
+  }
+
+  if (closeResolveModalBtn && resolveComplaintModal) {
+    closeResolveModalBtn.addEventListener("click", () => {
+      resolveComplaintModal.classList.add("hidden");
+      resetResolveModalUI();
+    });
+  }
+
+  if (cancelResolveBtn && resolveComplaintModal) {
+    cancelResolveBtn.addEventListener("click", () => {
+      resolveComplaintModal.classList.add("hidden");
+      resetResolveModalUI();
+    });
+  }
+
+  if (resolveComplaintModal) {
+    resolveComplaintModal.addEventListener("click", (e) => {
+      if (e.target === resolveComplaintModal) {
+        resolveComplaintModal.classList.add("hidden");
+        resetResolveModalUI();
+      }
+    });
+  }
+
+  // Handle Resolution Form Submit (Upload After Photo + Custom Action Remarks)
+  if (resolveComplaintForm) {
+    resolveComplaintForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!activeResolveComplaintId) return;
+
+      if (!currentResolveAfterPhotoBase64) {
+        alert("Please upload an 'After' resolution photo proof before marking this complaint as Resolved.");
+        return;
+      }
+
+      const adminRemarks = resolveRemarksInput ? resolveRemarksInput.value.trim() : "";
+      const token = localStorage.getItem(TOKEN_KEY);
+
+      try {
+        const patchRes = await fetch(`/api/complaints/${activeResolveComplaintId}/status`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            status: "Resolved",
+            resolvedImageUrl: currentResolveAfterPhotoBase64,
+            adminRemarks: adminRemarks
+          })
+        });
+
+        const patchData = await patchRes.json();
+        if (!patchRes.ok) {
+          alert(patchData.error || "Failed to resolve complaint.");
+          return;
+        }
+
+        resolveComplaintModal.classList.add("hidden");
+        if (imageVerifyModal) imageVerifyModal.classList.add("hidden");
+        resetResolveModalUI();
+
+        alert(`✓ Grievance resolved successfully! 'After' cleanup proof recorded and 10 Swachhta Points awarded to reporter.`);
+        loadAdminDashboard();
+      } catch (err) {
+        alert("Network error: Could not complete resolution.");
+      }
+    });
+  }
+
+  // ==========================================================================
+  // Open Evidence Photo Inspection Modal
+  // ==========================================================================
+  function openImageVerifyModal(complaintId) {
+    const c = adminLoadedComplaints.find(item => item.complaintId === complaintId);
+    if (!c) return;
+
+    const modal = document.getElementById("imageVerifyModal");
+    const modalTitle = document.getElementById("verifyModalTitle");
+    const modalImg = document.getElementById("verifyModalImg");
+    const modalNoImg = document.getElementById("verifyModalNoImg");
+    const verifyBeforeSection = document.getElementById("verifyBeforeSection");
+    const verifyAfterSection = document.getElementById("verifyAfterSection");
+    const verifyModalAfterImg = document.getElementById("verifyModalAfterImg");
+    const verifyRemarksItem = document.getElementById("verifyRemarksItem");
+    const verifyRemarksText = document.getElementById("verifyRemarksText");
+    const verifyOpenResolveBtn = document.getElementById("verifyOpenResolveBtn");
+
+    const verifyId = document.getElementById("verifyComplaintId");
+    const verifyCat = document.getElementById("verifyCategory");
+    const verifyLoc = document.getElementById("verifyLocation");
+    const verifyCoords = document.getElementById("verifyCoords");
+    const verifyReporter = document.getElementById("verifyReporter");
+    const verifyDesc = document.getElementById("verifyDescription");
+    const verifyBadge = document.getElementById("verifyStatusBadge");
+
+    if (!modal) return;
+
+    if (modalTitle) modalTitle.textContent = `Evidence Verification — ${c.complaintId}`;
+    if (verifyId) verifyId.textContent = c.complaintId;
+    if (verifyCat) verifyCat.textContent = c.category;
+    if (verifyLoc) verifyLoc.textContent = c.locationText || c.title || 'Geotagged Location';
+    if (verifyCoords) {
+      const latLngStr = (c.coordinates && typeof c.coordinates.lat === 'number')
+        ? `${c.coordinates.lat.toFixed(5)}, ${c.coordinates.lng.toFixed(5)}`
+        : 'N/A';
+      verifyCoords.textContent = latLngStr;
+    }
+    if (verifyReporter) verifyReporter.textContent = c.isAnonymous ? 'Anonymous Citizen' : (c.reporterName || 'Citizen');
+    if (verifyDesc) verifyDesc.textContent = c.description || 'No additional details entered.';
+    if (verifyBadge) {
+      verifyBadge.textContent = c.status;
+      const statusClass = c.status === "Resolved" ? "badge-green" : (c.status === "In-Progress" || c.status === "Assigned") ? "badge-blue" : "badge-amber";
+      verifyBadge.className = `badge-status ${statusClass}`;
+    }
+
+    // Citizen Evidence (Before Photo)
+    const hasBefore = c.imageUrl && (c.imageUrl.startsWith("data:image") || c.imageUrl.startsWith("http") || c.imageUrl.length > 50);
+    if (hasBefore) {
+      if (modalImg) modalImg.src = c.imageUrl;
+      if (verifyBeforeSection) verifyBeforeSection.classList.remove("hidden");
+      if (modalNoImg) modalNoImg.classList.add("hidden");
+    } else {
+      if (verifyBeforeSection) verifyBeforeSection.classList.add("hidden");
+      if (modalNoImg) modalNoImg.classList.remove("hidden");
+    }
+
+    // Municipal Proof (After Photo)
+    const hasAfter = c.resolvedImageUrl && (c.resolvedImageUrl.startsWith("data:image") || c.resolvedImageUrl.startsWith("http") || c.resolvedImageUrl.length > 50);
+    if (hasAfter && verifyAfterSection && verifyModalAfterImg) {
+      verifyModalAfterImg.src = c.resolvedImageUrl;
+      verifyAfterSection.classList.remove("hidden");
+    } else if (verifyAfterSection) {
+      verifyAfterSection.classList.add("hidden");
+    }
+
+    // Municipal Action Remarks (Custom text)
+    if (c.adminRemarks && verifyRemarksItem && verifyRemarksText) {
+      verifyRemarksText.textContent = `"${c.adminRemarks}"`;
+      verifyRemarksItem.classList.remove("hidden");
+    } else if (verifyRemarksItem) {
+      verifyRemarksItem.classList.add("hidden");
+    }
+
+    // Wire up resolve button inside verification modal
+    if (verifyOpenResolveBtn) {
+      verifyOpenResolveBtn.textContent = c.status === "Resolved"
+        ? "📷 Update 'After' Photo & Remarks"
+        : "✓ Upload 'After' Photo & Resolve (+10 Pts)";
+      verifyOpenResolveBtn.onclick = () => {
+        modal.classList.add("hidden");
+        openResolveComplaintModal(c.complaintId);
+      };
+    }
+
+    modal.setAttribute("data-active-id", c.complaintId);
+    modal.classList.remove("hidden");
+  }
+
+  window.inspectAdminComplaintPhoto = openImageVerifyModal;
+
+  // Setup Verification Modal Listeners
+  const imageVerifyModal = document.getElementById("imageVerifyModal");
+  const closeVerifyModalBtn = document.getElementById("closeVerifyModalBtn");
+
+  if (closeVerifyModalBtn && imageVerifyModal) {
+    closeVerifyModalBtn.addEventListener("click", () => {
+      imageVerifyModal.classList.add("hidden");
+    });
+  }
+
+  if (imageVerifyModal) {
+    imageVerifyModal.addEventListener("click", (e) => {
+      if (e.target === imageVerifyModal) {
+        imageVerifyModal.classList.add("hidden");
+      }
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        if (resolveComplaintModal && !resolveComplaintModal.classList.contains("hidden")) {
+          resolveComplaintModal.classList.add("hidden");
+        } else if (imageVerifyModal && !imageVerifyModal.classList.contains("hidden")) {
+          imageVerifyModal.classList.add("hidden");
+        }
+      }
+    });
+
+    // Wire up quick status update buttons inside modal
+    const actionBtns = imageVerifyModal.querySelectorAll(".verify-action-btn");
+    actionBtns.forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const complaintId = imageVerifyModal.getAttribute("data-active-id");
+        const newStatus = btn.getAttribute("data-status");
+        if (!complaintId || !newStatus) return;
+
+        const token = localStorage.getItem(TOKEN_KEY);
+        try {
+          const patchRes = await fetch(`/api/complaints/${complaintId}/status`, {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({ status: newStatus })
+          });
+
+          if (patchRes.ok) {
+            imageVerifyModal.classList.add("hidden");
+            alert(`✓ Status updated to ${newStatus}.`);
+            loadAdminDashboard();
+          } else {
+            const errData = await patchRes.json();
+            alert(errData.error || "Failed to update complaint status.");
+          }
+        } catch (err) {
+          alert("Error updating complaint status.");
+        }
+      });
+    });
+  }
+
   // 2 & 3. Complaint Table & Status Update (PATCH /api/complaints/:id/status)
   function renderAdminComplaintsTable(complaints) {
     if (!complaintsTable) return;
     const tbody = complaintsTable.querySelector("tbody");
     if (!tbody) return;
 
+    adminLoadedComplaints = complaints;
+
     if (complaints.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 2rem;">No citizen complaints recorded yet.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 2rem;">No citizen complaints recorded yet.</td></tr>`;
       return;
     }
 
@@ -714,9 +1509,62 @@ document.addEventListener("DOMContentLoaded", () => {
         ? `<span class="badge-status badge-gold" style="font-size:0.68rem; display:block; margin-top:3px; background:#fefce8; color:#ca8a04; border:1px solid #fef08a;">⭐ +10 Pts Awarded</span>`
         : '';
 
+      const hasBefore = c.imageUrl && (c.imageUrl.startsWith("data:image") || c.imageUrl.startsWith("http") || c.imageUrl.length > 50);
+      const hasAfter = c.resolvedImageUrl && (c.resolvedImageUrl.startsWith("data:image") || c.resolvedImageUrl.startsWith("http") || c.resolvedImageUrl.length > 50);
+
+      let photoHtml = "";
+      if (hasBefore && hasAfter) {
+        photoHtml = `
+          <div class="evidence-dual-cell">
+            <div class="evidence-thumb-wrap" title="Citizen Evidence (Before)">
+              <img src="${c.imageUrl}" class="evidence-thumb" data-id="${c.complaintId}" />
+              <span class="thumb-badge before-badge">Before</span>
+            </div>
+            <div class="evidence-thumb-wrap" title="Municipal Resolution (After)">
+              <img src="${c.resolvedImageUrl}" class="evidence-thumb" data-id="${c.complaintId}" />
+              <span class="thumb-badge after-badge">After</span>
+            </div>
+            <button type="button" class="btn-verify-photo" data-id="${c.complaintId}">Inspect</button>
+          </div>
+        `;
+      } else if (hasBefore) {
+        photoHtml = `
+          <div class="evidence-cell">
+            <div class="evidence-thumb-wrap" title="Citizen Evidence (Before)">
+              <img src="${c.imageUrl}" class="evidence-thumb" data-id="${c.complaintId}" />
+              <span class="thumb-badge before-badge">Before</span>
+            </div>
+            <button type="button" class="btn-verify-photo" data-id="${c.complaintId}">Inspect</button>
+          </div>
+        `;
+      } else if (hasAfter) {
+        photoHtml = `
+          <div class="evidence-cell">
+            <div class="evidence-thumb-wrap" title="Municipal Resolution (After)">
+              <img src="${c.resolvedImageUrl}" class="evidence-thumb" data-id="${c.complaintId}" />
+              <span class="thumb-badge after-badge">After</span>
+            </div>
+            <button type="button" class="btn-verify-photo" data-id="${c.complaintId}">Inspect</button>
+          </div>
+        `;
+      } else {
+        photoHtml = `
+          <span class="no-photo-badge" title="No photo uploaded">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="opacity:0.6;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+            No Photo
+          </span>
+        `;
+      }
+
+      const isResolved = c.status === "Resolved";
+      const resolveButtonHtml = isResolved
+        ? `<button type="button" class="btn btn-xs btn-outline btn-open-resolve" data-id="${c.complaintId}" title="View or update After photo proof">📷 Edit Proof</button>`
+        : `<button type="button" class="btn btn-xs btn-primary btn-open-resolve" data-id="${c.complaintId}">✓ Resolve + Proof</button>`;
+
       tr.innerHTML = `
         <td><strong>${c.complaintId}</strong></td>
         <td><span class="category-pill">${c.category}</span></td>
+        <td>${photoHtml}</td>
         <td>${c.locationText || c.title}</td>
         <td><code style="font-size: 0.78rem; color: var(--color-cyan);">${coordsText}</code></td>
         <td>
@@ -725,15 +1573,95 @@ document.addEventListener("DOMContentLoaded", () => {
         </td>
         <td>${new Date(c.createdAt).toLocaleDateString()}</td>
         <td>
-          <select class="form-control status-update-select" data-id="${c.complaintId}" style="width: auto; display: inline-block; padding: 0.25rem 0.5rem; font-size: 0.78rem;">
-            <option value="Reported" ${c.status === "Reported" ? "selected" : ""}>Reported</option>
-            <option value="Assigned" ${c.status === "Assigned" ? "selected" : ""}>Assigned</option>
-            <option value="In-Progress" ${c.status === "In-Progress" ? "selected" : ""}>In-Progress</option>
-            <option value="Resolved" ${c.status === "Resolved" ? "selected" : ""}>Resolved</option>
-          </select>
+          <div class="action-column-wrap">
+            <select class="form-control status-update-select" data-id="${c.complaintId}" style="width: auto; padding: 0.25rem 0.5rem; font-size: 0.78rem;">
+              <option value="Reported" ${c.status === "Reported" ? "selected" : ""}>Reported</option>
+              <option value="Assigned" ${c.status === "Assigned" ? "selected" : ""}>Assigned</option>
+              <option value="In-Progress" ${c.status === "In-Progress" ? "selected" : ""}>In-Progress</option>
+              <option value="Resolved" ${c.status === "Resolved" ? "selected" : ""}>Resolved</option>
+            </select>
+            ${resolveButtonHtml}
+            <div class="action-remarks-row">
+              <input type="text" class="form-control admin-action-input" data-id="${c.complaintId}" placeholder="Action note..." value="${c.adminRemarks || ''}" title="Enter custom action remarks and click save (💾)">
+              <button type="button" class="btn-save-remarks" data-id="${c.complaintId}" title="Save Action Remarks">💾</button>
+            </div>
+          </div>
         </td>
       `;
       tbody.appendChild(tr);
+    });
+
+    // Wire up thumbnail and verify button clicks
+    const verifyTriggers = tbody.querySelectorAll(".evidence-thumb, .btn-verify-photo");
+    verifyTriggers.forEach((trigger) => {
+      trigger.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const cid = trigger.getAttribute("data-id");
+        openImageVerifyModal(cid);
+      });
+    });
+
+    // Wire up 'Resolve + Proof' buttons
+    const resolveBtns = tbody.querySelectorAll(".btn-open-resolve");
+    resolveBtns.forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const cid = btn.getAttribute("data-id");
+        openResolveComplaintModal(cid);
+      });
+    });
+
+    // Wire up saving action remarks (Custom text field)
+    const saveRemarksBtns = tbody.querySelectorAll(".btn-save-remarks");
+    saveRemarksBtns.forEach((btn) => {
+      btn.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        const cid = btn.getAttribute("data-id");
+        const input = tbody.querySelector(`.admin-action-input[data-id="${cid}"]`);
+        if (!input) return;
+        const remarks = input.value.trim();
+        const c = adminLoadedComplaints.find(item => item.complaintId === cid);
+        if (!c) return;
+
+        const token = localStorage.getItem(TOKEN_KEY);
+        try {
+          const patchRes = await fetch(`/api/complaints/${cid}/status`, {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              status: c.status,
+              resolvedImageUrl: c.resolvedImageUrl || '',
+              adminRemarks: remarks
+            })
+          });
+
+          if (patchRes.ok) {
+            alert(`✓ Action remarks saved for ${cid}.`);
+            loadAdminDashboard();
+          } else {
+            const err = await patchRes.json();
+            alert(err.error || "Failed to save remarks.");
+          }
+        } catch (err) {
+          alert("Error saving remarks.");
+        }
+      });
+    });
+
+    // Also support Enter key inside action remarks input
+    const remarksInputs = tbody.querySelectorAll(".admin-action-input");
+    remarksInputs.forEach((input) => {
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          const cid = input.getAttribute("data-id");
+          const saveBtn = tbody.querySelector(`.btn-save-remarks[data-id="${cid}"]`);
+          if (saveBtn) saveBtn.click();
+        }
+      });
     });
 
     // Hook up status changes
@@ -742,8 +1670,16 @@ document.addEventListener("DOMContentLoaded", () => {
       sel.addEventListener("change", async () => {
         const complaintId = sel.getAttribute("data-id");
         const newStatus = sel.value;
-        const token = localStorage.getItem(TOKEN_KEY);
+        const c = adminLoadedComplaints.find(item => item.complaintId === complaintId);
 
+        // If user changed status to 'Resolved', require the 'After' photo via the resolution modal
+        if (newStatus === "Resolved") {
+          openResolveComplaintModal(complaintId);
+          if (c) sel.value = c.status; // Revert select until modal confirms
+          return;
+        }
+
+        const token = localStorage.getItem(TOKEN_KEY);
         try {
           const patchRes = await fetch(`/api/complaints/${complaintId}/status`, {
             method: "PATCH",
@@ -751,21 +1687,22 @@ document.addEventListener("DOMContentLoaded", () => {
               "Content-Type": "application/json",
               "Authorization": `Bearer ${token}`
             },
-            body: JSON.stringify({ status: newStatus })
+            body: JSON.stringify({
+              status: newStatus,
+              adminRemarks: c ? c.adminRemarks : ''
+            })
           });
 
           if (patchRes.ok) {
-            const patchData = await patchRes.json();
-            if (patchData.pointsAwarded) {
-              alert(`✓ Status updated to Resolved! 10 Swachhta Points awarded to reporter.`);
-            }
             loadAdminDashboard();
           } else {
             const errData = await patchRes.json();
             alert(errData.error || "Failed to update status.");
+            if (c) sel.value = c.status;
           }
         } catch (err) {
           alert("Error updating complaint status.");
+          if (c) sel.value = c.status;
         }
       });
     });
@@ -786,21 +1723,26 @@ document.addEventListener("DOMContentLoaded", () => {
     tbody.innerHTML = "";
     pickups.forEach((p) => {
       const tr = document.createElement("tr");
-      const statusClass = p.status === "Collected" ? "badge-green" : p.status === "Scheduled" ? "badge-blue" : "badge-amber";
+      const statusClass = (p.status === "Collected" || p.status === "Completed") ? "badge-green" : (p.status === "In-Transit" || p.status === "Scheduled") ? "badge-blue" : "badge-amber";
+      const vehicleInfo = `${p.assignedVehicle || 'VAN-SPEC-02'} (${p.truckNumber || 'KA-01-EA-4920'})`;
 
       tr.innerHTML = `
         <td><strong>${p.pickupId}</strong></td>
         <td>${p.wasteType}</td>
         <td>${p.address}</td>
         <td>${new Date(p.scheduledDate).toLocaleDateString()}</td>
-        <td>VAN-SPEC-02</td>
+        <td><code>${vehicleInfo}</code></td>
         <td><span class="badge-status ${statusClass}">${p.status}</span></td>
         <td>
-          <select class="form-control pickup-status-select" data-id="${p.pickupId}" style="width: auto; display: inline-block; padding: 0.25rem 0.5rem; font-size: 0.78rem;">
-            <option value="Requested" ${p.status === "Requested" ? "selected" : ""}>Requested</option>
-            <option value="Scheduled" ${p.status === "Scheduled" ? "selected" : ""}>Scheduled</option>
-            <option value="Collected" ${p.status === "Collected" ? "selected" : ""}>Collected</option>
-          </select>
+          <div style="display:flex; align-items:center; gap:0.4rem;">
+            <select class="form-control pickup-status-select" data-id="${p.pickupId}" style="width: auto; display: inline-block; padding: 0.25rem 0.5rem; font-size: 0.78rem;">
+              <option value="Requested" ${p.status === "Requested" ? "selected" : ""}>Requested</option>
+              <option value="Scheduled" ${p.status === "Scheduled" ? "selected" : ""}>Scheduled</option>
+              <option value="In-Transit" ${p.status === "In-Transit" ? "selected" : ""}>In-Transit</option>
+              <option value="Collected" ${p.status === "Collected" || p.status === "Completed" ? "selected" : ""}>Collected</option>
+            </select>
+            <a href="/#track" target="_blank" class="btn btn-sm btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" title="View Live Truck Radar">Track Van</a>
+          </div>
         </td>
       `;
       tbody.appendChild(tr);
@@ -945,17 +1887,45 @@ document.addEventListener("DOMContentLoaded", () => {
       ? `${c.coordinates.lat.toFixed(5)}, ${c.coordinates.lng.toFixed(5)}`
       : 'N/A';
 
+    const hasBeforePhoto = c.imageUrl && (c.imageUrl.startsWith('data:image') || c.imageUrl.startsWith('http') || c.imageUrl.length > 50);
+    const hasAfterPhoto = c.resolvedImageUrl && (c.resolvedImageUrl.startsWith('data:image') || c.resolvedImageUrl.startsWith('http') || c.resolvedImageUrl.length > 50);
+
     return `
-      <div style="font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 13px; color: #0f172a; min-width: 220px; padding: 2px;">
+      <div style="font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 13px; color: #0f172a; min-width: 240px; max-width: 280px; padding: 2px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px;">
           <span style="font-weight:800; font-size:14px; color:#065f46;">${c.complaintId}</span>
           <span style="font-size:11px; font-weight:700; background:${statusBg}; color:${statusColor}; padding:2px 8px; border-radius:12px; border:1px solid ${statusColor}33;">${c.status}</span>
         </div>
+        ${(hasBeforePhoto || hasAfterPhoto) ? `
+          <div style="display:grid; grid-template-columns:${(hasBeforePhoto && hasAfterPhoto) ? '1fr 1fr' : '1fr'}; gap:6px; margin-bottom:8px;">
+            ${hasBeforePhoto ? `
+              <div>
+                <div style="font-size:10px; font-weight:700; color:#dc2626; text-transform:uppercase; margin-bottom:2px;">Before</div>
+                <div style="border-radius:6px; overflow:hidden; border:1px solid #cbd5e1; height:80px; background:#0f172a; text-align:center;">
+                  <img src="${c.imageUrl}" alt="Before" style="width:100%; height:100%; object-fit:cover; display:block; cursor:pointer;" onclick="window.inspectAdminComplaintPhoto && window.inspectAdminComplaintPhoto('${c.complaintId}')" title="Initial Evidence"/>
+                </div>
+              </div>
+            ` : ''}
+            ${hasAfterPhoto ? `
+              <div>
+                <div style="font-size:10px; font-weight:700; color:#059669; text-transform:uppercase; margin-bottom:2px;">After</div>
+                <div style="border-radius:6px; overflow:hidden; border:1px solid #10b981; height:80px; background:#0f172a; text-align:center;">
+                  <img src="${c.resolvedImageUrl}" alt="After" style="width:100%; height:100%; object-fit:cover; display:block; cursor:pointer;" onclick="window.inspectAdminComplaintPhoto && window.inspectAdminComplaintPhoto('${c.complaintId}')" title="Resolution Proof"/>
+                </div>
+              </div>
+            ` : ''}
+          </div>
+        ` : ''}
         <div style="font-weight:700; font-size:13px; margin-bottom:4px; color:#1e293b;">${c.title}</div>
         <div style="font-size:12px; color:#475569; margin-bottom:4px;"><b>Category:</b> ${c.category}</div>
         <div style="font-size:12px; color:#475569; margin-bottom:4px;"><b>Location:</b> ${c.locationText || 'Geotagged'}</div>
         <div style="font-size:11px; color:#64748b; margin-bottom:4px;"><b>GPS:</b> <code>${coordsStr}</code></div>
         <div style="font-size:11px; color:#64748b; margin-bottom:4px;"><b>Reported:</b> ${new Date(c.createdAt).toLocaleDateString()} by ${c.isAnonymous ? 'Anonymous Citizen' : (c.reporterName || 'Citizen')}</div>
+        ${c.adminRemarks ? `
+          <div style="margin-top:6px; padding:6px 8px; background:#f0fdf4; border-left:3px solid #10b981; border-radius:3px; font-size:11px; color:#166534; line-height:1.4;">
+            <strong>Officer Action:</strong> ${c.adminRemarks}
+          </div>
+        ` : ''}
         ${isResolved ? '<div style="background:#ecfdf5; border:1px solid #a7f3d0; border-radius:4px; padding:4px 8px; font-size:11px; color:#065f46; font-weight:600; margin-top:6px;">⭐ +10 Swachhta Points Awarded</div>' : ''}
         ${c.description ? `<div style="margin-top:6px; padding:6px; background:#f8fafc; border-radius:4px; font-size:11px; color:#334155; line-height:1.4;">${c.description}</div>` : ''}
       </div>
@@ -1289,7 +2259,8 @@ document.addEventListener("DOMContentLoaded", () => {
         const data = await response.json();
 
         if (!response.ok) {
-          showAuthAlert(data.error || "Registration failed.", true);
+          const errMsg = data.error || (data.message ? data.message : "Registration failed.");
+          showAuthAlert(data.hint ? `${errMsg} • ${data.hint}` : errMsg, true);
           return;
         }
 
@@ -1520,8 +2491,17 @@ document.addEventListener("DOMContentLoaded", () => {
           if (pRes.ok) {
             const pData = await pRes.json();
             const pickups = pData.pickups || [];
-            const pendingPickups = pickups.filter(p => p.status === "Requested" || p.status === "Scheduled").length;
+            const pendingPickups = pickups.filter(p => p.status === "Requested" || p.status === "Scheduled" || p.status === "In-Transit").length;
             pickupsEl.textContent = pendingPickups;
+
+            // If citizen has their own pickup, track their latest pickup
+            if (pickups.length > 0 && typeof updatePickupTrackerUI === 'function') {
+              const myLatest = pickups.find(p => p.status === 'In-Transit' || p.status === 'Scheduled') || pickups[0];
+              if (myLatest && trackPickupInput) {
+                trackPickupInput.value = myLatest.pickupId;
+                updatePickupTrackerUI(myLatest.pickupId);
+              }
+            }
           }
         }
       }
@@ -1532,5 +2512,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
   checkSession();
   loadCitizenStats();
+
+  // Auto-initialize dual column trackers with live demonstration data
+  setTimeout(() => {
+    if (typeof updateTrackerUI === 'function' && trackInput && trackInput.value) {
+      updateTrackerUI(trackInput.value.trim());
+    }
+    if (typeof updatePickupTrackerUI === 'function' && trackPickupInput && trackPickupInput.value) {
+      updatePickupTrackerUI(trackPickupInput.value.trim());
+    }
+  }, 400);
 });
 

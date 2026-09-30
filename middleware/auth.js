@@ -10,7 +10,8 @@ const authMiddleware = async (req, res, next) => {
   const token = authHeader.replace('Bearer ', '').trim();
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const jwtSecret = process.env.JWT_SECRET || 'prabhav_portal_jwt_secret_key_2026';
+    const decoded = jwt.verify(token, jwtSecret);
     const user = await User.findById(decoded.id).select('-password');
     if (!user) {
       return res.status(401).json({ error: 'User no longer exists.' });
