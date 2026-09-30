@@ -25,6 +25,17 @@ app.use(express.json({ limit: '15mb' }));
 app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// URL Normalization Middleware for Vercel Serverless Rewrites
+app.use((req, res, next) => {
+  const orig = req.headers['x-matched-path'] || req.headers['x-forwarded-uri'] || req.originalUrl;
+  if (orig && (orig.startsWith('/api') || orig.startsWith('/auth') || orig.startsWith('/complaints') || orig.startsWith('/pickups') || orig.startsWith('/ai'))) {
+    if (req.url === '/api' || req.url === '/' || req.url === '/api/' || req.url.startsWith('/api/index')) {
+      req.url = orig;
+    }
+  }
+  next();
+});
+
 const Complaint = require('./models/Complaint');
 const Pickup = require('./models/Pickup');
 
@@ -140,8 +151,8 @@ async function connectToDatabase() {
 
   if (!cachedPromise) {
     const opts = {
-      serverSelectionTimeoutMS: 8000,
-      connectTimeoutMS: 8000
+      serverSelectionTimeoutMS: 5000,
+      connectTimeoutMS: 5000
     };
 
     cachedPromise = mongoose.connect(mongoUri, opts)
@@ -169,17 +180,32 @@ async function connectToDatabase() {
   return await cachedPromise;
 }
 
+// Root API Endpoint
+app.get(['/api', '/api/'], (req, res) => {
+  res.json({
+    success: true,
+    message: 'Prabhav Portal API is live and operational.',
+    endpoints: {
+      health: '/api/health',
+      auth: '/api/auth',
+      complaints: '/api/complaints',
+      pickups: '/api/pickups',
+      ai: '/api/ai'
+    }
+  });
+});
+
 // Ensure Database is connected before processing /api requests
 app.use(async (req, res, next) => {
   const isApi = req.path.startsWith('/api') || req.path.startsWith('/auth') || req.path.startsWith('/complaints') || req.path.startsWith('/pickups') || req.path.startsWith('/ai');
   if (isApi) {
-    // Exclude health check from blocking
-    if (req.path === '/api/health' || req.path === '/health') return next();
+    // Exclude health check and root from blocking
+    if (req.path === '/api/health' || req.path === '/health' || req.path === '/api' || req.path === '/') return next();
 
     try {
       await connectToDatabase();
     } catch (err) {
-      return res.status(500).json({
+      return res.status(503).json({
         error: 'Database connection failed: ' + err.message,
         hint: 'If running on Vercel, ensure MONGO_URI is set in Vercel Environment Variables and MongoDB Atlas Network Access allows 0.0.0.0/0 (Anywhere).'
       });

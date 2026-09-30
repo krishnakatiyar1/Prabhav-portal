@@ -2239,6 +2239,29 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  // Helper to safely parse API responses even if server returns HTML error pages (404, 500, 504)
+  async function parseResponsePayload(response) {
+    const contentType = (response.headers && response.headers.get("content-type")) || "";
+    if (contentType.includes("application/json")) {
+      try {
+        return await response.json();
+      } catch (e) {
+        return { error: "Failed to parse JSON response from server." };
+      }
+    }
+    const rawText = await response.text().catch(() => "");
+    if (response.status === 404) {
+      return { error: "Route not found (404). Please verify Vercel serverless routing." };
+    } else if (response.status === 504) {
+      return { error: "Gateway Timeout (504): MongoDB connection timed out.", hint: "Please whitelist 0.0.0.0/0 in MongoDB Atlas Network Access." };
+    } else if (response.status === 503) {
+      return { error: "Service Unavailable (503): Database connection failed.", hint: "Please ensure MongoDB Atlas allows 0.0.0.0/0." };
+    } else if (response.status === 500) {
+      return { error: `Server Error (500): ${rawText.slice(0, 100) || "Internal server error"}` };
+    }
+    return { error: `Server returned HTTP ${response.status}: ${rawText.slice(0, 80) || response.statusText}` };
+  }
+
   // Register Form Submit
   if (registerForm) {
     registerForm.addEventListener("submit", async (e) => {
@@ -2256,7 +2279,7 @@ document.addEventListener("DOMContentLoaded", () => {
           body: JSON.stringify({ name, email, password })
         });
 
-        const data = await response.json();
+        const data = await parseResponsePayload(response);
 
         if (!response.ok) {
           const errMsg = data.error || (data.message ? data.message : "Registration failed.");
@@ -2275,7 +2298,7 @@ document.addEventListener("DOMContentLoaded", () => {
           if (authModal) authModal.classList.add("hidden");
         }, 1200);
       } catch (err) {
-        showAuthAlert("Network error. Could not connect to server.", true);
+        showAuthAlert(`Network error: ${err.message || "Could not connect to server."}`, true);
       }
     });
   }
@@ -2296,10 +2319,11 @@ document.addEventListener("DOMContentLoaded", () => {
           body: JSON.stringify({ email, password })
         });
 
-        const data = await response.json();
+        const data = await parseResponsePayload(response);
 
         if (!response.ok) {
-          showAuthAlert(data.error || "Login failed.", true);
+          const errMsg = data.error || data.message || "Login failed.";
+          showAuthAlert(data.hint ? `${errMsg} • ${data.hint}` : errMsg, true);
           return;
         }
 
@@ -2318,7 +2342,7 @@ document.addEventListener("DOMContentLoaded", () => {
           }
         }, 1000);
       } catch (err) {
-        showAuthAlert("Network error. Could not connect to server.", true);
+        showAuthAlert(`Network error: ${err.message || "Could not connect to server."}`, true);
       }
     });
   }
@@ -2358,11 +2382,12 @@ document.addEventListener("DOMContentLoaded", () => {
           body: JSON.stringify({ email, password })
         });
 
-        const data = await response.json();
+        const data = await parseResponsePayload(response);
 
         if (!response.ok) {
           if (adminLoginAlert) {
-            adminLoginAlert.textContent = data.error || "Authentication failed.";
+            const errMsg = data.error || data.message || "Authentication failed.";
+            adminLoginAlert.textContent = data.hint ? `${errMsg} • ${data.hint}` : errMsg;
             adminLoginAlert.className = "auth-alert error";
             adminLoginAlert.classList.remove("hidden");
           }
@@ -2389,7 +2414,7 @@ document.addEventListener("DOMContentLoaded", () => {
         loadAdminDashboard();
       } catch (err) {
         if (adminLoginAlert) {
-          adminLoginAlert.textContent = "Network error. Could not connect to server.";
+          adminLoginAlert.textContent = `Network error: ${err.message || "Could not connect to server."}`;
           adminLoginAlert.className = "auth-alert error";
           adminLoginAlert.classList.remove("hidden");
         }
