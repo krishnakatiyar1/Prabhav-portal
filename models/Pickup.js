@@ -94,6 +94,27 @@ const pickupSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  baseFee: {
+    type: Number,
+    default: 200
+  },
+  redeemedPoints: {
+    type: Number,
+    default: 0
+  },
+  discountAmount: {
+    type: Number,
+    default: 0
+  },
+  finalFee: {
+    type: Number,
+    default: 200
+  },
+  paymentStatus: {
+    type: String,
+    enum: ['Paid', 'Pending', 'Waived'],
+    default: 'Paid'
+  },
   createdAt: {
     type: Date,
     default: Date.now

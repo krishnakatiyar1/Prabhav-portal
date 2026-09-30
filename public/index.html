@@ -28,6 +28,12 @@
         <span>Prabhav <strong>Portal</strong></span>
       </a>
 
+      <!-- Real-Time Municipal Clock -->
+      <div class="header-live-clock" id="headerLiveClock">
+        <span class="live-pulse-dot"></span>
+        <span id="headerLiveDateTime">Loading real time...</span>
+      </div>
+
       <!-- Mobile Navigation Hamburger -->
       <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">
         <span></span>
@@ -44,6 +50,7 @@
         <a href="#pickup" class="nav-link">Doorstep Pickup</a>
         <a href="#awareness" class="nav-link">Segregation Guide</a>
         <a href="#assistant" class="nav-link">AI Assistant</a>
+        <a href="#vision" class="nav-link">5-Year Vision</a>
         <a href="admin.html" id="adminPortalLink" class="btn btn-secondary nav-btn">Admin Portal</a>
         <div id="authNavArea" class="auth-nav-area">
           <button id="openAuthModalBtn" class="btn btn-primary btn-sm" type="button">Sign In / Register</button>
@@ -100,7 +107,7 @@
               <span class="stat-desc">Resolution Rate</span>
             </div>
             <div class="stat-pill">
-              <span class="stat-num">&lt; 2.5 hrs</span>
+              <span class="stat-num">1 day</span>
               <span class="stat-desc">Avg Response Time</span>
             </div>
             <div class="stat-pill">
@@ -118,7 +125,7 @@
                 <span class="pulse-indicator"></span>
                 <span>Telemetry Grid</span>
               </div>
-              <a href="#map-view" style="font-size: 0.75rem; font-weight: 700; color: var(--primary); text-decoration: none; display: inline-flex; align-items: center; gap: 0.25rem;">
+              <a href="#map-view" class="visual-map-link">
                 Live Map &rarr;
               </a>
             </div>
@@ -201,7 +208,7 @@
                   <span>Bin #42: 87% Full</span>
                 </div>
                 <div class="vchip blue">
-                  <span class="vchip-dot" style="background:var(--info);"></span>
+                  <span class="vchip-dot vchip-dot-blue"></span>
                   <span>Unit #08 En Route</span>
                 </div>
               </div>
@@ -215,7 +222,7 @@
               </div>
               <div>
                 <span class="vstat-label">Response SLA</span>
-                <span class="vstat-num text-green">&lt; 2.5 hrs</span>
+                <span class="vstat-num text-green">1 day</span>
               </div>
               <div>
                 <span class="vstat-label">Fleet Status</span>
@@ -320,7 +327,7 @@
         </div>
 
         <!-- Real Leaflet Map Container -->
-        <div id="citizenComplaintsMap" class="real-leaflet-map" style="height: 480px; width: 100%; border-radius: var(--radius-md); overflow: hidden; position: relative; z-index: 1;"></div>
+        <div id="citizenComplaintsMap" class="real-leaflet-map"></div>
 
         <div class="map-card-footer">
           <div class="map-legend-items">
@@ -430,7 +437,8 @@
             <p>Your civic grievance has been logged into the Prabhav Portal municipal dispatch grid.</p>
             <div class="alert-meta">
               <span>Complaint ID: <strong id="generatedTicketId">CP-4029</strong></span>
-              <span>Estimated Crew Arrival: <strong>Within 2.5 hours</strong></span>
+              <span>Logged at: <strong id="reportLoggedTime">Just now</strong></span>
+              <span>Estimated Crew Arrival: <strong>Within 1 day</strong></span>
               <span>Swachhta Reward: <strong class="text-green">⭐ +10 Points upon resolution</strong></span>
             </div>
           </div>
@@ -439,12 +447,12 @@
         <!-- Right Column: Municipal Dispatch SLA & Guide -->
         <div class="report-side-card">
           <div>
-            <div class="badge-tag" style="margin-bottom: 0.75rem;">Civic Protocol</div>
-            <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem;">4-Hour Resolution SLA</h3>
-            <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5;">Every verified report triggers an automated ticket dispatched to the nearest zonal ward sanitation vehicle.</p>
+            <div class="badge-tag guide-badge">Civic Protocol</div>
+            <h3 class="guide-side-title">1-Day Resolution SLA</h3>
+            <p class="guide-side-desc">Every verified report triggers an automated ticket dispatched to the nearest zonal ward sanitation vehicle.</p>
           </div>
 
-          <div style="display: flex; flex-direction: column; gap: 1rem;">
+          <div class="guide-steps-list">
             <div class="guide-step">
               <div class="guide-step-num">1</div>
               <div class="guide-step-body">
@@ -478,9 +486,9 @@
             </div>
           </div>
 
-          <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid var(--emerald-border); border-radius: var(--radius-sm); padding: 1rem;">
-            <span style="font-size: 0.8rem; font-weight: 600; color: var(--emerald-400); display: block; margin-bottom: 0.25rem;">💡 Pro Tip for Fast Clearance:</span>
-            <p style="font-size: 0.78rem; color: var(--text-secondary); line-height: 1.4; margin: 0;">Upload a clear photo of the dumpster or roadside waste so dispatchers can send the appropriately sized compactor.</p>
+          <div class="guide-protip-box">
+            <span class="guide-protip-label">💡 Pro Tip for Fast Clearance:</span>
+            <p class="guide-protip-text">Upload a clear photo of the dumpster or roadside waste so dispatchers can send the appropriately sized compactor.</p>
           </div>
         </div>
       </div>
@@ -493,7 +501,7 @@
       <div class="section-header">
         <span class="section-tag">Live Civic Audit & Fleet Radar</span>
         <h2 class="section-title">Track Grievances & Doorstep Fleet</h2>
-        <p class="section-subtitle">Real-time municipal tracking: Monitor public waste complaints or follow your scheduled doorstep collection truck on live radar.</p>
+        <p class="section-subtitle">Real-time municipal tracking: Monitor public waste complaints or follow your scheduled doorstep collection status.</p>
       </div>
 
       <div class="track-dual-grid">
@@ -564,7 +572,7 @@
                     </svg>
                   </div>
                   <span class="step-title">Reported</span>
-                  <span class="step-time">09:15 AM</span>
+                  <span class="step-time" id="stepReportedTime">09:15 AM</span>
                 </div>
 
                 <!-- Step 2: Assigned -->
@@ -575,7 +583,7 @@
                     </svg>
                   </div>
                   <span class="step-title">Assigned</span>
-                  <span class="step-time">09:40 AM</span>
+                  <span class="step-time" id="stepAssignedTime">09:40 AM</span>
                 </div>
 
                 <!-- Step 3: In-Progress -->
@@ -584,7 +592,7 @@
                     <div class="pulse-dot"></div>
                   </div>
                   <span class="step-title">In-Progress</span>
-                  <span class="step-time">Truck Dispatched</span>
+                  <span class="step-time" id="stepInprogressTime">Truck Dispatched</span>
                 </div>
 
                 <!-- Step 4: Resolved -->
@@ -595,7 +603,7 @@
                     </svg>
                   </div>
                   <span class="step-title">Resolved</span>
-                  <span class="step-time">Pending verification</span>
+                  <span class="step-time" id="stepResolvedTime">Pending verification</span>
                 </div>
               </div>
             </div>
@@ -651,9 +659,9 @@
             </div>
 
             <!-- Feedback Widget for Resolved Complaints -->
-            <div class="feedback-submission-box hidden" id="complaintFeedbackContainer" style="margin-top: 1.25rem; padding: 1.25rem; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-md);">
-              <h4 style="font-size: 0.95rem; margin-bottom: 0.35rem; color: var(--color-green);">Citizen Resolution Feedback</h4>
-              <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.75rem;">This grievance has been resolved. Please rate the municipal resolution:</p>
+            <div class="feedback-submission-box hidden" id="complaintFeedbackContainer">
+              <h4 class="feedback-submission-title">Citizen Resolution Feedback</h4>
+              <p class="feedback-submission-desc">This grievance has been resolved. Please rate the municipal resolution:</p>
               <div id="feedbackStatusAlert" class="auth-alert hidden"></div>
               <form id="complaintFeedbackForm">
                 <div class="form-row">
@@ -670,11 +678,11 @@
                     <input type="text" id="feedbackCommentInput" class="form-control" placeholder="Optional comments...">
                   </div>
                 </div>
-                <button type="submit" class="btn btn-primary btn-sm" style="margin-top: 0.75rem;">Submit Rating</button>
+                <button type="submit" class="btn btn-primary btn-sm feedback-submit-btn">Submit Rating</button>
               </form>
-              <div id="feedbackSubmittedView" class="hidden" style="margin-top: 0.5rem; font-size: 0.88rem;">
-                <span class="text-green" style="font-weight: 600;">✓ Feedback recorded:</span> <span id="feedbackRatingDisplay"></span>
-                <p id="feedbackCommentDisplay" style="color: var(--text-secondary); font-size: 0.82rem; margin-top: 0.25rem;"></p>
+              <div id="feedbackSubmittedView" class="feedback-submitted-view hidden">
+                <span class="feedback-recorded-label">✓ Feedback recorded:</span> <span id="feedbackRatingDisplay"></span>
+                <p id="feedbackCommentDisplay" class="feedback-comment-display"></p>
               </div>
             </div>
           </div>
@@ -688,15 +696,15 @@
             <div class="track-col-badge pickup-badge">
               <span>🚛 Special Waste Fleet</span>
             </div>
-            <h3 class="track-col-title">Doorstep Pickup & Live Truck</h3>
-            <p class="track-col-desc">Track your scheduled special waste collection and watch the assigned municipal truck approach your doorstep in real time.</p>
+            <h3 class="track-col-title">Doorstep Pickup Tracking</h3>
+            <p class="track-col-desc">Track your scheduled special waste collection status and live municipal dispatch updates.</p>
           </div>
 
           <div class="track-card pickup-track-card">
             <!-- Pickup Search Bar -->
             <form id="trackPickupForm" class="track-search-bar">
               <input type="text" id="trackPickupInput" class="form-control" placeholder="Enter Pickup ID (e.g., PU-8821)" value="PU-8821" required>
-              <button type="submit" class="btn btn-primary">Locate Van</button>
+              <button type="submit" class="btn btn-primary">Track Pickup</button>
             </form>
 
             <div class="quick-chips-row">
@@ -723,6 +731,10 @@
                 <span class="summary-label">Scheduled Date</span>
                 <span class="summary-val" id="trackPickupDate">Tomorrow</span>
               </div>
+              <div class="summary-item">
+                <span class="summary-label">Collection Tariff</span>
+                <span class="summary-val" id="trackPickupFee">₹200</span>
+              </div>
             </div>
 
             <!-- 4-Step Pickup Stepper -->
@@ -738,7 +750,7 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
                   </div>
                   <span class="step-title">Requested</span>
-                  <span class="step-time">Slot Booked</span>
+                  <span class="step-time" id="pickupStepRequestedTime">Slot Booked</span>
                 </div>
 
                 <!-- Step 2: Scheduled -->
@@ -747,7 +759,7 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
                   </div>
                   <span class="step-title">Scheduled</span>
-                  <span class="step-time">Van Assigned</span>
+                  <span class="step-time" id="pickupStepScheduledTime">Van Assigned</span>
                 </div>
 
                 <!-- Step 3: In-Transit / En-Route -->
@@ -756,7 +768,7 @@
                     <div class="pulse-dot"></div>
                   </div>
                   <span class="step-title">En-Route</span>
-                  <span class="step-time">Truck Active</span>
+                  <span class="step-time" id="pickupStepIntransitTime">Truck Active</span>
                 </div>
 
                 <!-- Step 4: Collected -->
@@ -765,65 +777,29 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
                   </div>
                   <span class="step-title">Collected</span>
-                  <span class="step-time">Waste Loaded</span>
+                  <span class="step-time" id="pickupStepCollectedTime">Waste Loaded</span>
                 </div>
               </div>
             </div>
 
             <!-- Step Detail Message for Pickup -->
             <div class="step-details-box pickup-step-details-box" id="pickupStepDetailBox">
-              <div class="detail-badge in-progress-badge" id="pickupStatusBadge">Status: En-Route</div>
-              <p id="pickupStepDetailMessage">Municipal Sanitation Truck <strong>VAN-SPEC-02</strong> is active and currently navigating towards your pickup address.</p>
+              <div class="detail-badge in-progress-badge" id="pickupStatusBadge">Status: In-Transit</div>
+              <p id="pickupStepDetailMessage">Pickup request is active and in progress.</p>
             </div>
 
-            <!-- Live Truck Radar & Dispatch Update Card -->
-            <div class="pickup-truck-radar-card" id="pickupTruckRadarCard">
-              <div class="radar-card-header">
-                <div class="radar-title-box">
-                  <span class="radar-live-indicator"><span class="radar-ping"></span> MUNICIPAL DISPATCH STATUS</span>
-                  <h4 class="radar-truck-name" id="pickupTruckName">Van VAN-SPEC-02</h4>
-                </div>
-                <div class="radar-eta-badge" id="pickupEtaBadge">
-                  <span class="eta-icon">⏱️</span>
-                  <div>
-                    <span class="eta-label">ESTIMATED ARRIVAL</span>
-                    <strong class="eta-val" id="pickupEtaValue">14 mins (1.8 km away)</strong>
-                  </div>
+            <!-- Officer Progress Update Box -->
+            <div class="pickup-admin-update-box" id="pickupAdminUpdateBox">
+              <div class="pickup-admin-update-header">
+                <span class="pickup-admin-update-title">📢 Officer Progress Update</span>
+                <div class="pickup-admin-meta-wrap">
+                  <span id="pickupAdminUpdateTime" class="pickup-admin-update-time"></span>
+                  <span class="crew-status-pill badge-green" id="pickupLiveStatusPill">In-Transit</span>
                 </div>
               </div>
-
-              <!-- Officer Progress Update Box (Replaces Map) -->
-              <div class="pickup-admin-update-box" id="pickupAdminUpdateBox" style="margin-top: 0.85rem; padding: 0.85rem 1rem; background: var(--surface-soft, #f8fafc); border: 1px solid var(--border-color, #e2e8f0); border-left: 4px solid var(--primary, #059669); border-radius: var(--radius-sm, 6px);">
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.35rem;">
-                  <span style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--primary, #059669);">
-                    📢 Admin Progress Update
-                  </span>
-                  <span class="crew-status-pill badge-green" id="pickupLiveStatusPill" style="font-size: 0.7rem; padding: 0.15rem 0.5rem;">Live Signal Active</span>
-                </div>
-                <p id="pickupAdminProgressText" style="font-size: 0.92rem; color: var(--text-color, #1e293b); font-weight: 500; margin: 0; line-height: 1.45;">
-                  The truck is dispatched and currently en route to your sector.
-                </p>
-              </div>
-
-              <!-- Telemetry & Crew Info -->
-              <div class="truck-crew-card" id="truckCrewCard" style="margin-top: 0.75rem;">
-                <div class="crew-avatar">👨‍✈️</div>
-                <div class="crew-details">
-                  <div class="crew-name-row">
-                    <strong id="pickupDriverName">Rajesh Kumar (Senior Crew Lead)</strong>
-                    <span class="truck-plate-badge" id="pickupTruckPlate">KA-01-EA-4920</span>
-                  </div>
-                  <div class="crew-telemetry-text" id="pickupTelemetryText">
-                    Sanitation vehicle is on the road approaching your sector.
-                  </div>
-                  <div class="crew-contact-row">
-                    <a href="tel:+919845012890" id="pickupDriverCallBtn" class="crew-call-link">
-                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
-                      Call Driver (<span id="pickupDriverPhone">+91 98450 12890</span>)
-                    </a>
-                  </div>
-                </div>
-              </div>
+              <p id="pickupAdminProgressText" class="pickup-admin-progress-text">
+                The truck is dispatched.
+              </p>
             </div>
 
           </div>
@@ -870,7 +846,7 @@
               <div class="form-group">
                 <div class="location-header">
                   <label for="pickupLocation">Locality / Ward *</label>
-                  <button type="button" id="detectPickupLocationBtn" class="btn btn-sm btn-ghost" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;">
+                  <button type="button" id="detectPickupLocationBtn" class="btn btn-sm btn-ghost btn-detect-pickup">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon-sm">
                       <polygon points="3 11 22 2 13 21 11 13 3 11"/>
                     </svg>
@@ -883,6 +859,64 @@
             </div>
           </div>
 
+          <!-- Swachhata Points Redemption Card -->
+          <div class="pickup-pricing-card">
+            <div class="pickup-pricing-header">
+              <span class="pricing-title">
+                <span>🏷️</span> Doorstep Collection Tariff & Points Redemption
+              </span>
+              <span class="badge-tag">Official Municipal Rate</span>
+            </div>
+
+            <div class="pricing-tariff-row">
+              <span>Base Doorstep Collection Charge:</span>
+              <span class="tariff-base-price">₹200</span>
+            </div>
+
+            <!-- Points Redemption Box -->
+            <div id="pointsRedeemSection" class="points-redeem-box">
+              <div class="points-redeem-row">
+                <label class="points-checkbox-label">
+                  <input type="checkbox" id="redeemPointsCheckbox" class="points-checkbox-input">
+                  <span>Redeem Swachhata Points (1 Point = ₹1 Off)</span>
+                </label>
+                <span class="points-balance-tag">
+                  Your Balance: <strong id="formUserPointsBalance" class="form-points-balance">0</strong> Pts
+                </span>
+              </div>
+
+              <!-- Slider & Amount input -->
+              <div id="pointsRedeemSliderWrap" class="points-slider-wrap hidden">
+                <div class="points-slider-header">
+                  <span class="points-slider-title">Redeem up to 100 points (₹100 max discount):</span>
+                  <strong id="pointsRedeemedDisplay" class="points-redeemed-val">0 Pts (-₹0)</strong>
+                </div>
+                <input type="range" id="pointsRedeemRange" class="points-range-input" min="0" max="100" value="0" step="1">
+                <div class="points-slider-ticks">
+                  <span>0 Pts (₹0 discount)</span>
+                  <span id="maxRedeemNotice">Up to 100 Pts (₹100 discount)</span>
+                </div>
+              </div>
+
+              <!-- 0 Points Notice -->
+              <p id="pointsZeroHint" class="points-zero-hint hidden">
+                ⭐ You have 0 Swachhata points. Report civic waste grievances and earn <strong>+10 points</strong> upon verification to unlock doorstep discounts!
+              </p>
+            </div>
+
+            <!-- Discount & Payable Total -->
+            <div class="pricing-payable-row">
+              <div>
+                <span class="pricing-payable-label">Net Amount Payable:</span>
+                <span id="appliedDiscountNotice" class="pricing-discount-sub hidden">Includes ₹0 Swachhata discount</span>
+              </div>
+              <div class="pricing-right-col">
+                <span id="originalPriceStrikethrough" class="pricing-original-strike hidden">₹200</span>
+                <strong id="finalPayablePrice" class="pricing-final-amount">₹200</strong>
+              </div>
+            </div>
+          </div>
+
           <button type="submit" class="btn btn-primary btn-block">Request Doorstep Pickup</button>
         </form>
 
@@ -891,7 +925,9 @@
           <p>Our municipal specialized waste collection vehicle will visit your address on the scheduled date.</p>
           <div class="alert-meta">
             <span>Booking Ref: <strong id="pickupBookingId">PU-8821</strong></span>
+            <span>Booked at: <strong id="pickupSuccessBookedTime">Just now</strong></span>
             <span>Slot: <strong>Morning (09:00 AM - 12:00 PM)</strong></span>
+            <span id="pickupSuccessPaymentMeta">Doorstep Tariff: <strong id="pickupSuccessPaidVal">₹200</strong></span>
           </div>
         </div>
       </div>
@@ -999,7 +1035,7 @@
 
       <div class="assistant-card">
         <div class="ai-input-group">
-          <label for="aiWasteInput" class="form-label" style="margin-bottom: 0.6rem;">What do you want to dispose of?</label>
+          <label for="aiWasteInput" class="form-label ai-input-label">What do you want to dispose of?</label>
           <div class="input-with-button">
             <input type="text" id="aiWasteInput" class="form-control" placeholder="e.g., coconut shells, expired tablet, plastic milk packet" value="Plastic Milk Packet">
             <button type="button" id="aiAnalyzeBtn" class="btn btn-primary">
@@ -1046,6 +1082,120 @@
     </div>
   </section>
 
+  <!-- 5-Year Strategic Vision & Roadmap Section -->
+  <section class="section vision-section" id="vision">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag">Mission 2031 Vision</span>
+        <h2 class="section-title">Where We Reach in the Next 5 Years</h2>
+        <p class="section-subtitle">A strategic 5-year civic transformation roadmap driving our municipality toward zero-landfill reliance, 100% clean energy circularity, and AI-powered smart sanitation.</p>
+      </div>
+
+      <!-- 5-Year Milestone Grid -->
+      <div class="vision-timeline-grid">
+        <!-- Year 1: 2027 -->
+        <div class="vision-card">
+          <div class="vision-card-header">
+            <span class="vision-year-badge">Year 1 &bull; 2027</span>
+            <div class="vision-icon-circle">📡</div>
+          </div>
+          <h3 class="vision-card-title">Universal IoT & Sensor Grid</h3>
+          <span class="vision-card-target">100% Ward Coverage &bull; &lt; 60m SLA</span>
+          <p class="vision-card-desc">
+            Equipping every community bin and municipal vehicle with ultrasonic fill-level sensors and real-time telemetry to preemptively dispatch cleanup crews before overflow happens.
+          </p>
+        </div>
+
+        <!-- Year 2: 2028 -->
+        <div class="vision-card">
+          <div class="vision-card-header">
+            <span class="vision-year-badge">Year 2 &bull; 2028</span>
+            <div class="vision-icon-circle">⚡</div>
+          </div>
+          <h3 class="vision-card-title">Ward Biogas Microgrids</h3>
+          <span class="vision-card-target">50 Decentralized Biomethanation Hubs</span>
+          <p class="vision-card-desc">
+            Processing 1,200 tonnes of daily segregated wet kitchen and market waste locally into compressed bio-gas (CBG), generating clean electricity for public streetlighting.
+          </p>
+        </div>
+
+        <!-- Year 3: 2029 -->
+        <div class="vision-card">
+          <div class="vision-card-header">
+            <span class="vision-year-badge">Year 3 &bull; 2029</span>
+            <div class="vision-icon-circle">🚛</div>
+          </div>
+          <h3 class="vision-card-title">100% Electric Green Fleet</h3>
+          <span class="vision-card-target">Zero Diesel &bull; 350 Electric Compactors</span>
+          <p class="vision-card-desc">
+            Retiring all fossil-fuel sanitation vehicles in favor of zero-emission electric compactors powered by solar battery-swapping stations across all municipal zones.
+          </p>
+        </div>
+
+        <!-- Year 4: 2030 -->
+        <div class="vision-card">
+          <div class="vision-card-header">
+            <span class="vision-year-badge">Year 4 &bull; 2030</span>
+            <div class="vision-icon-circle">🤖</div>
+          </div>
+          <h3 class="vision-card-title">AI Robotic Sorting MRFs</h3>
+          <span class="vision-card-target">99.2% Polymer Purity Recovery</span>
+          <p class="vision-card-desc">
+            Deploying high-speed computer-vision robotic sorters across regional Material Recovery Facilities to divert 99% of dry packaging and plastic into closed-loop upcycling.
+          </p>
+        </div>
+
+        <!-- Year 5: 2031 -->
+        <div class="vision-card">
+          <div class="vision-card-header">
+            <span class="vision-year-badge">Year 5 &bull; 2031</span>
+            <div class="vision-icon-circle">🌱</div>
+          </div>
+          <h3 class="vision-card-title">Net-Zero Landfill Metropolis</h3>
+          <span class="vision-card-target">99.8% City-Wide Circular Diversion</span>
+          <p class="vision-card-desc">
+            Achieving full zero-landfill status where every kilogram of municipal waste is converted into compost, power, or raw manufacturing goods, backed by digital citizen Swachhta rewards.
+          </p>
+        </div>
+      </div>
+
+      <!-- 5-Year Impact Summary Strip -->
+      <div class="vision-impact-strip">
+        <div class="vision-stat-item">
+          <div class="vision-stat-icon">🏞️</div>
+          <div>
+            <span class="vision-stat-number">0 Landfills</span>
+            <span class="vision-stat-label">Net-Zero Waste by 2031</span>
+          </div>
+        </div>
+
+        <div class="vision-stat-item">
+          <div class="vision-stat-icon">🔋</div>
+          <div>
+            <span class="vision-stat-number">100% Clean</span>
+            <span class="vision-stat-label">Power From Organic Waste</span>
+          </div>
+        </div>
+
+        <div class="vision-stat-item">
+          <div class="vision-stat-icon">⚡</div>
+          <div>
+            <span class="vision-stat-number">Zero Emissions</span>
+            <span class="vision-stat-label">Electrified Logistics Fleet</span>
+          </div>
+        </div>
+
+        <div class="vision-stat-item">
+          <div class="vision-stat-icon">🏅</div>
+          <div>
+            <span class="vision-stat-number">500,000+</span>
+            <span class="vision-stat-label">Citizens on Swachhta Grid</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- Footer -->
   <footer class="footer">
     <div class="container footer-container">
@@ -1078,7 +1228,7 @@
         <h4 class="footer-heading">Civic Resources</h4>
         <ul class="footer-links">
           <li><a href="#awareness">Waste Segregation Chart</a></li>
-          <li><a href="#awareness">Hazardous Material Safety</a></li>
+          <li><a href="#vision">5-Year Civic Roadmap</a></li>
           <li><a href="admin.html">Municipal Officer Login</a></li>
           <li><a href="#hero">City Sanitation Guidelines</a></li>
         </ul>

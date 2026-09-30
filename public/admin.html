@@ -95,7 +95,7 @@
             <span class="officer-role" id="adminOfficerRole">System Admin</span>
           </div>
         </div>
-        <button id="adminLogoutBtn" class="btn btn-sm btn-ghost btn-block" style="margin-top: 0.75rem;">Logout</button>
+        <button id="adminLogoutBtn" class="btn btn-sm btn-ghost btn-block admin-logout-btn">Logout</button>
       </div>
     </aside>
 
@@ -426,15 +426,15 @@
                 <h2 class="panel-title">City Waste Hotspot Radar</h2>
                 <span class="panel-subtitle">Geospatial complaint density zones & 500m cluster grouping</span>
               </div>
-              <div class="map-legend-bar" style="display: flex; gap: 0.75rem; font-size: 0.75rem; align-items: center;">
-                <span><span style="display:inline-block;width:9px;height:9px;background:#10b981;border-radius:50%;margin-right:3px;"></span> Low (1–3)</span>
-                <span><span style="display:inline-block;width:9px;height:9px;background:#f59e0b;border-radius:50%;margin-right:3px;"></span> Medium (4–9)</span>
-                <span><span style="display:inline-block;width:9px;height:9px;background:#ef4444;border-radius:50%;margin-right:3px;"></span> High (10+)</span>
+              <div class="map-legend-bar admin-legend-bar">
+                <span><span class="legend-indicator dot-low"></span> Low (1–3)</span>
+                <span><span class="legend-indicator dot-med"></span> Medium (4–9)</span>
+                <span><span class="legend-indicator dot-high"></span> High (10+)</span>
               </div>
             </div>
 
             <!-- Leaflet Map Container -->
-            <div id="adminHotspotMap" style="height: 380px; width: 100%; border-radius: var(--radius-md); border: 1px solid var(--border-color); overflow: hidden; position: relative; z-index: 1;"></div>
+            <div id="adminHotspotMap" class="admin-hotspot-map"></div>
           </section>
 
           <!-- Analytics Section -->
@@ -583,7 +583,7 @@
   <div id="resolveComplaintModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="resolveModalTitle">
     <div class="modal-card">
       <div class="modal-header">
-        <div style="display: flex; align-items: center; gap: 0.6rem;">
+        <div class="modal-title-wrap">
           <span class="badge-tag">Municipal Resolution</span>
           <h3 class="modal-title" id="resolveModalTitle">Resolve Grievance & Upload After Photo</h3>
         </div>
@@ -592,25 +592,25 @@
       <div class="modal-body">
         <div id="resolveAlert" class="auth-alert hidden"></div>
 
-        <div style="background: var(--surface-soft); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.85rem 1rem; margin-bottom: 1.25rem;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
-            <strong id="resolveTargetId" style="color: var(--primary); font-size: 0.95rem;">CP-XXXX</strong>
+        <div class="admin-target-card">
+          <div class="admin-target-header">
+            <strong id="resolveTargetId" class="admin-target-id">CP-XXXX</strong>
             <span class="badge-tag" id="resolveTargetCategory">Category</span>
           </div>
-          <div style="font-size: 0.82rem; color: var(--text-secondary);" id="resolveTargetLocation">Location</div>
+          <div class="admin-target-loc" id="resolveTargetLocation">Location</div>
         </div>
 
         <form id="resolveComplaintForm">
           <!-- Required 'After' Photo Proof -->
           <div class="form-group">
-            <label style="display: flex; justify-content: space-between; align-items: center;">
+            <label class="admin-upload-label">
               <span><strong>Upload 'After' Cleanup Proof Photo *</strong> (Required)</span>
-              <span style="font-size: 0.72rem; color: var(--color-green); font-weight: 600;">Enables Citizen Verification</span>
+              <span class="admin-verify-enable-tag">Enables Citizen Verification</span>
             </label>
-            <div class="file-upload-box" id="afterPhotoUploadContainer" style="padding: 1.25rem 1rem;">
+            <div class="file-upload-box admin-after-upload-box" id="afterPhotoUploadContainer">
               <input type="file" id="resolveAfterPhotoInput" accept="image/*" class="file-input" required>
               <div class="file-dummy-label" id="afterPhotoDummyLabel">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="upload-icon" style="color: var(--success);">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="upload-icon text-green">
                   <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
                   <circle cx="12" cy="13" r="4"></circle>
                 </svg>
@@ -635,7 +635,7 @@
             <span class="field-hint">This text will be visible to the citizen reporter in their live tracking dashboard.</span>
           </div>
 
-          <div style="display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem;">
+          <div class="admin-modal-actions">
             <button type="button" id="cancelResolveBtn" class="btn btn-ghost">Cancel</button>
             <button type="submit" id="submitResolveBtn" class="btn btn-primary">
               ✓ Confirm Resolution & Award 10 Pts
@@ -650,7 +650,7 @@
   <div id="imageVerifyModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="verifyModalTitle">
     <div class="modal-card modal-lg">
       <div class="modal-header">
-        <div style="display: flex; align-items: center; gap: 0.6rem;">
+        <div class="modal-title-wrap">
           <span class="badge-tag">Verification Protocol</span>
           <h3 class="modal-title" id="verifyModalTitle">Civic Evidence Photo Verification</h3>
         </div>
@@ -668,7 +668,7 @@
               <img id="verifyModalAfterImg" src="" alt="Municipal After Photo" />
             </div>
             <div id="verifyModalNoImg" class="no-photo-placeholder hidden">
-              <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:0.5rem; opacity:0.6;">
+              <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.5" class="empty-photo-icon">
                 <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
                 <circle cx="8.5" cy="8.5" r="1.5"></circle>
                 <polyline points="21 15 16 10 5 21"></polyline>
@@ -691,11 +691,15 @@
             </div>
             <div class="verify-detail-item">
               <span class="vdetail-label">GPS Coordinates</span>
-              <span class="vdetail-value" id="verifyCoords" style="font-family: monospace; font-size: 0.8rem; color: var(--color-cyan);">-</span>
+              <span class="vdetail-value verify-coords-val" id="verifyCoords">-</span>
             </div>
             <div class="verify-detail-item">
               <span class="vdetail-label">Reporter</span>
               <span class="vdetail-value" id="verifyReporter">-</span>
+            </div>
+            <div class="verify-detail-item">
+              <span class="vdetail-label">Reported Date & Time</span>
+              <span class="vdetail-value" id="verifyReportedTime">-</span>
             </div>
             <div class="verify-detail-item">
               <span class="vdetail-label">Citizen Description</span>
@@ -703,7 +707,7 @@
             </div>
             <div class="verify-detail-item hidden" id="verifyRemarksItem">
               <span class="vdetail-label">Municipal Action Remarks</span>
-              <p class="vdetail-desc" id="verifyRemarksText" style="border-left: 3px solid var(--primary); font-weight: 500;">-</p>
+              <p class="vdetail-desc verify-remarks-val" id="verifyRemarksText">-</p>
             </div>
             <div class="verify-detail-item">
               <span class="vdetail-label">Current Status</span>
@@ -711,8 +715,8 @@
             </div>
 
             <div class="verify-actions-box">
-              <label style="font-size: 0.78rem; font-weight: 700; display: block; margin-bottom: 0.5rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em;">Municipal Action & Status</label>
-              <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <label class="admin-actions-title">Municipal Action & Status</label>
+              <div class="admin-actions-btn-group">
                 <button type="button" class="btn btn-sm btn-outline verify-action-btn" data-status="In-Progress">⚡ Mark In-Progress</button>
                 <button type="button" class="btn btn-sm btn-primary" id="verifyOpenResolveBtn">✓ Upload 'After' Photo & Resolve (+10 Pts)</button>
               </div>

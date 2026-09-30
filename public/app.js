@@ -11,6 +11,81 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* ==========================================================================
+     Real-Time Date & Time Formatter and Live Clocks
+     ========================================================================== */
+  function formatDateTime(dateInput, includeSeconds = false) {
+    if (!dateInput) return 'N/A';
+    const d = (dateInput instanceof Date) ? dateInput : new Date(dateInput);
+    if (isNaN(d.getTime())) return 'N/A';
+
+    const dateStr = d.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+    
+    const timeOptions = {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    };
+    if (includeSeconds) timeOptions.second = '2-digit';
+
+    const timeStr = d.toLocaleTimeString('en-US', timeOptions);
+    return `${dateStr}, ${timeStr}`;
+  }
+
+  function formatRelativeOrDateTime(dateInput) {
+    if (!dateInput) return 'N/A';
+    const d = (dateInput instanceof Date) ? dateInput : new Date(dateInput);
+    if (isNaN(d.getTime())) return 'N/A';
+
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
+    const diffSec = Math.floor(diffMs / 1000);
+    const diffMin = Math.floor(diffSec / 60);
+    const diffHour = Math.floor(diffMin / 60);
+
+    const timeStr = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+    const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+    if (diffSec < 60) return `Just now (${timeStr})`;
+    if (diffMin < 60) return `${diffMin}m ago (${timeStr})`;
+    if (diffHour < 24 && d.getDate() === now.getDate()) return `Today at ${timeStr}`;
+    return `${dateStr}, ${timeStr}`;
+  }
+
+  // Live real-time clocks for citizen portal header and admin command topbar
+  function updateLiveClocks() {
+    const now = new Date();
+    const fullDateStr = now.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+    const timeWithSec = now.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true
+    });
+
+    const citizenClock = document.getElementById("headerLiveDateTime");
+    if (citizenClock) {
+      citizenClock.textContent = `${fullDateStr} • ${timeWithSec}`;
+    }
+
+    const adminClock = document.getElementById("liveDate");
+    if (adminClock) {
+      adminClock.textContent = `${fullDateStr} • ${timeWithSec}`;
+    }
+  }
+
+  setInterval(updateLiveClocks, 1000);
+  updateLiveClocks();
+
+  /* ==========================================================================
      1. Navigation & Mobile Menu Toggle (Citizen App)
      ========================================================================== */
   const navToggle = document.getElementById("navToggle");
@@ -306,6 +381,10 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         // Show confirmation box
+        const reportLoggedTime = document.getElementById("reportLoggedTime");
+        if (reportLoggedTime) {
+          reportLoggedTime.textContent = formatDateTime(data.complaint?.createdAt || new Date());
+        }
         reportSuccessAlert.classList.remove("hidden");
         reportSuccessAlert.scrollIntoView({ behavior: "smooth", block: "nearest" });
 
@@ -354,7 +433,17 @@ document.addEventListener("DOMContentLoaded", () => {
       if (trackTicketId) trackTicketId.textContent = complaint.complaintId;
       if (trackCategory) trackCategory.textContent = complaint.category;
       if (trackLocation) trackLocation.textContent = complaint.locationText || `${complaint.coordinates.lat.toFixed(4)}, ${complaint.coordinates.lng.toFixed(4)}`;
-      if (trackUpdated) trackUpdated.textContent = new Date(complaint.updatedAt || complaint.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      if (trackUpdated) trackUpdated.textContent = formatRelativeOrDateTime(complaint.updatedAt || complaint.createdAt);
+
+      const stepReportedTime = document.getElementById("stepReportedTime");
+      const stepAssignedTime = document.getElementById("stepAssignedTime");
+      const stepInprogressTime = document.getElementById("stepInprogressTime");
+      const stepResolvedTime = document.getElementById("stepResolvedTime");
+
+      const createdDate = new Date(complaint.createdAt);
+      if (stepReportedTime) {
+        stepReportedTime.textContent = formatDateTime(createdDate);
+      }
 
       // Evidence Photo in Citizen Tracker
       const trackPhotoItem = document.getElementById("trackPhotoItem");
@@ -402,6 +491,31 @@ document.addEventListener("DOMContentLoaded", () => {
       if (currentStep >= 2 && stepAssigned) stepAssigned.classList.add(currentStep === 2 ? "active" : "completed");
       if (currentStep >= 3 && stepInprogress) stepInprogress.classList.add(currentStep === 3 ? "active" : "completed");
       if (currentStep >= 4 && stepResolved) stepResolved.classList.add("completed");
+
+      // Dynamic Real-Time Date & Time for Complaint Stepper
+      if (stepAssignedTime) {
+        if (currentStep >= 2) {
+          const assignedTime = new Date(createdDate.getTime() + 25 * 60000);
+          stepAssignedTime.textContent = formatDateTime(assignedTime);
+        } else {
+          stepAssignedTime.textContent = "Pending Assignment";
+        }
+      }
+      if (stepInprogressTime) {
+        if (currentStep >= 3) {
+          const inprogTime = new Date(createdDate.getTime() + 50 * 60000);
+          stepInprogressTime.textContent = formatDateTime(inprogTime);
+        } else {
+          stepInprogressTime.textContent = "Awaiting Dispatch";
+        }
+      }
+      if (stepResolvedTime) {
+        if (currentStep >= 4) {
+          stepResolvedTime.textContent = formatDateTime(complaint.updatedAt || new Date());
+        } else {
+          stepResolvedTime.textContent = "Pending Verification";
+        }
+      }
 
       // Add pulse dot to whichever step is currently active
       const activeStepNode = allSteps[currentStep - 1];
@@ -469,8 +583,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
           if (resolutionTimestamp) {
             resolutionTimestamp.textContent = isResolved
-              ? `Resolved & Site Cleared on ${new Date(complaint.updatedAt || complaint.createdAt).toLocaleDateString()} at ${new Date(complaint.updatedAt || complaint.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-              : `Dispatched & Active In Field`;
+              ? `Resolved & Site Cleared on ${formatDateTime(complaint.updatedAt || complaint.createdAt)}`
+              : `Dispatched & Active In Field (Live: ${formatDateTime(complaint.updatedAt || new Date())})`;
           }
 
           // Before Photo
@@ -618,6 +732,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const trackPickupWasteType = document.getElementById("trackPickupWasteType");
   const trackPickupAddress = document.getElementById("trackPickupAddress");
   const trackPickupDate = document.getElementById("trackPickupDate");
+  const trackPickupFee = document.getElementById("trackPickupFee");
   const pickupStepperProgressBar = document.getElementById("pickupStepperProgressBar");
   const pickupStepRequested = document.getElementById("pickup-step-requested");
   const pickupStepScheduled = document.getElementById("pickup-step-scheduled");
@@ -625,13 +740,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const pickupStepCollected = document.getElementById("pickup-step-collected");
   const pickupStatusBadge = document.getElementById("pickupStatusBadge");
   const pickupStepDetailMessage = document.getElementById("pickupStepDetailMessage");
-  const pickupTruckName = document.getElementById("pickupTruckName");
-  const pickupEtaValue = document.getElementById("pickupEtaValue");
-  const pickupDriverName = document.getElementById("pickupDriverName");
-  const pickupTruckPlate = document.getElementById("pickupTruckPlate");
-  const pickupTelemetryText = document.getElementById("pickupTelemetryText");
-  const pickupDriverCallBtn = document.getElementById("pickupDriverCallBtn");
-  const pickupDriverPhone = document.getElementById("pickupDriverPhone");
   const pickupLiveStatusPill = document.getElementById("pickupLiveStatusPill");
   const pickupAdminProgressText = document.getElementById("pickupAdminProgressText");
 
@@ -654,10 +762,30 @@ document.addEventListener("DOMContentLoaded", () => {
       if (trackPickupId) trackPickupId.textContent = p.pickupId;
       if (trackPickupWasteType) trackPickupWasteType.textContent = p.wasteType || 'Special Waste';
       if (trackPickupAddress) trackPickupAddress.textContent = p.address || 'Doorstep Address';
+      const pickupStepRequestedTime = document.getElementById("pickupStepRequestedTime");
+      const pickupStepScheduledTime = document.getElementById("pickupStepScheduledTime");
+      const pickupStepIntransitTime = document.getElementById("pickupStepIntransitTime");
+      const pickupStepCollectedTime = document.getElementById("pickupStepCollectedTime");
+      const pickupAdminUpdateTime = document.getElementById("pickupAdminUpdateTime");
+      const pickupCreatedDate = p.createdAt ? new Date(p.createdAt) : new Date();
+
       if (trackPickupDate) {
-        trackPickupDate.textContent = p.scheduledDate
-          ? new Date(p.scheduledDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
-          : 'Pending schedule';
+        if (p.scheduledDate) {
+          const sDate = new Date(p.scheduledDate);
+          const dateStr = sDate.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+          trackPickupDate.innerHTML = `<strong>${dateStr}</strong> <span style="display:block; font-size:0.75rem; color:var(--text-secondary); margin-top:2px;">Slot: 09:00 AM - 12:00 PM</span>`;
+        } else {
+          trackPickupDate.textContent = 'Pending Schedule';
+        }
+      }
+      if (trackPickupFee) {
+        const fee = p.finalFee !== undefined ? p.finalFee : 200;
+        const discount = p.discountAmount || (p.redeemedPoints ? p.redeemedPoints * 1 : 0);
+        if (discount > 0) {
+          trackPickupFee.innerHTML = `<strong>₹${fee}</strong> <span style="font-size:0.75rem; color:var(--primary); font-weight:600;">(₹${discount} off via ${p.redeemedPoints || discount} Pts)</span>`;
+        } else {
+          trackPickupFee.textContent = `₹${fee} (Standard Tariff)`;
+        }
       }
 
       // 4-Step Stepper mapping
@@ -684,6 +812,38 @@ document.addEventListener("DOMContentLoaded", () => {
       if (currentStep >= 2 && pickupStepScheduled) pickupStepScheduled.classList.add(currentStep === 2 ? "active" : "completed");
       if (currentStep >= 3 && pickupStepIntransit) pickupStepIntransit.classList.add(currentStep === 3 ? "active" : "completed");
       if (currentStep >= 4 && pickupStepCollected) pickupStepCollected.classList.add("completed");
+
+      // Dynamic Real-Time Date & Time for Pickup Stepper
+      if (pickupStepRequestedTime) {
+        pickupStepRequestedTime.textContent = formatDateTime(pickupCreatedDate);
+      }
+      if (pickupStepScheduledTime) {
+        if (currentStep >= 2) {
+          const scheduledMilestone = new Date(pickupCreatedDate.getTime() + 35 * 60000);
+          pickupStepScheduledTime.textContent = formatDateTime(scheduledMilestone);
+        } else {
+          pickupStepScheduledTime.textContent = "Pending Schedule";
+        }
+      }
+      if (pickupStepIntransitTime) {
+        if (currentStep >= 3) {
+          const transitMilestone = new Date(pickupCreatedDate.getTime() + 75 * 60000);
+          pickupStepIntransitTime.textContent = formatDateTime(transitMilestone);
+        } else {
+          pickupStepIntransitTime.textContent = "Awaiting Dispatch";
+        }
+      }
+      if (pickupStepCollectedTime) {
+        if (currentStep >= 4) {
+          pickupStepCollectedTime.textContent = formatDateTime(p.updatedAt || new Date());
+        } else {
+          pickupStepCollectedTime.textContent = "Pending Collection";
+        }
+      }
+
+      if (pickupAdminUpdateTime) {
+        pickupAdminUpdateTime.textContent = formatDateTime(p.updatedAt || p.createdAt || new Date());
+      }
 
       const activePickupStepNode = allPickupSteps[currentStep - 1];
       if (activePickupStepNode && currentStep < 4) {
@@ -727,11 +887,11 @@ document.addEventListener("DOMContentLoaded", () => {
         if (p.status === 'Requested') {
           pickupStepDetailMessage.innerHTML = `Pickup request <strong>${p.pickupId}</strong> is logged. Dispatch team is assigning a specialized municipal vehicle.`;
         } else if (p.status === 'Scheduled') {
-          pickupStepDetailMessage.innerHTML = `Collection vehicle <strong>${p.assignedVehicle || 'VAN-SPEC-02'}</strong> scheduled. Route preparation in progress for your slot.`;
+          pickupStepDetailMessage.innerHTML = `Collection vehicle scheduled. Route preparation in progress for your slot.`;
         } else if (p.status === 'In-Transit') {
-          pickupStepDetailMessage.innerHTML = `Municipal Sanitation Truck <strong>${p.assignedVehicle || 'VAN-SPEC-02'}</strong> is on the road and en route.`;
+          pickupStepDetailMessage.innerHTML = `Municipal Sanitation Truck is on the road and en route.`;
         } else if (p.status === 'Collected' || p.status === 'Completed') {
-          pickupStepDetailMessage.innerHTML = `Special waste loaded and collected successfully from your doorstep by crew lead <strong>${p.driverName || 'Municipal Team'}</strong>.`;
+          pickupStepDetailMessage.innerHTML = `Special waste loaded and collected successfully from your doorstep.`;
         }
 
         if (customPickupNote) {
@@ -741,37 +901,6 @@ document.addEventListener("DOMContentLoaded", () => {
               "${customPickupNote}"
             </div>
           `;
-        }
-      }
-
-      // Telemetry & Crew details
-      const vehicleName = p.assignedVehicle || 'VAN-SPEC-02';
-      const plate = p.truckNumber || 'KA-01-EA-4920';
-      if (pickupTruckName) pickupTruckName.textContent = `${vehicleName} (${plate})`;
-      if (pickupTruckPlate) pickupTruckPlate.textContent = plate;
-      if (pickupDriverName) pickupDriverName.textContent = p.driverName || 'Rajesh Kumar (Senior Crew Lead)';
-      if (pickupDriverPhone) pickupDriverPhone.textContent = p.driverPhone || '+91 98450 12890';
-      if (pickupDriverCallBtn) pickupDriverCallBtn.href = `tel:${(p.driverPhone || '+919845012890').replace(/\s+/g, '')}`;
-
-      const eta = p.etaMinutes ?? 14;
-      const dist = p.distanceKm ?? 1.8;
-      if (pickupEtaValue) {
-        if (p.status === 'Collected' || p.status === 'Completed') {
-          pickupEtaValue.textContent = 'Collected & Cleared';
-        } else if (p.status === 'Requested') {
-          pickupEtaValue.textContent = 'Awaiting Dispatch';
-        } else {
-          pickupEtaValue.textContent = `${eta} mins (${dist} km away)`;
-        }
-      }
-
-      if (pickupTelemetryText) {
-        if (p.status === 'Collected' || p.status === 'Completed') {
-          pickupTelemetryText.textContent = 'Waste was safely transferred to the regional sorting facility.';
-        } else if (p.status === 'Requested') {
-          pickupTelemetryText.textContent = 'Vehicle will be dispatched from Zonal Depot on the scheduled date.';
-        } else {
-          pickupTelemetryText.textContent = customPickupNote || `Cruising at ${p.truckLocation?.speedKmH || 26} km/h towards ${p.address || 'doorstep'}. Please keep bulky items accessible.`;
         }
       }
 
@@ -835,11 +964,97 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   /* ==========================================================================
-     5. Doorstep Pickup Request Submission Handler (Connected to POST /api/pickups)
+     5. Doorstep Pickup Request Handler with Swachhata Points Redemption
      ========================================================================== */
   const pickupForm = document.getElementById("pickupForm");
   const pickupSuccessAlert = document.getElementById("pickupSuccessAlert");
   const pickupBookingId = document.getElementById("pickupBookingId");
+  const pickupSuccessPaidVal = document.getElementById("pickupSuccessPaidVal");
+
+  // Swachhata Points Redemption Elements
+  const redeemPointsCheckbox = document.getElementById("redeemPointsCheckbox");
+  const formUserPointsBalance = document.getElementById("formUserPointsBalance");
+  const pointsRedeemSliderWrap = document.getElementById("pointsRedeemSliderWrap");
+  const pointsRedeemedDisplay = document.getElementById("pointsRedeemedDisplay");
+  const pointsRedeemRange = document.getElementById("pointsRedeemRange");
+  const maxRedeemNotice = document.getElementById("maxRedeemNotice");
+  const pointsZeroHint = document.getElementById("pointsZeroHint");
+  const appliedDiscountNotice = document.getElementById("appliedDiscountNotice");
+  const originalPriceStrikethrough = document.getElementById("originalPriceStrikethrough");
+  const finalPayablePrice = document.getElementById("finalPayablePrice");
+
+  function updatePickupPricingUI() {
+    const userPts = (currentUser && typeof currentUser.swachhtaPoints === 'number') ? currentUser.swachhtaPoints : 0;
+    if (formUserPointsBalance) formUserPointsBalance.textContent = userPts;
+
+    const maxRedeemable = Math.min(100, userPts);
+
+    if (userPts <= 0) {
+      if (pointsZeroHint) pointsZeroHint.classList.remove("hidden");
+      if (redeemPointsCheckbox) {
+        redeemPointsCheckbox.checked = false;
+        redeemPointsCheckbox.disabled = true;
+      }
+      if (pointsRedeemSliderWrap) pointsRedeemSliderWrap.classList.add("hidden");
+      if (originalPriceStrikethrough) originalPriceStrikethrough.classList.add("hidden");
+      if (appliedDiscountNotice) appliedDiscountNotice.classList.add("hidden");
+      if (finalPayablePrice) finalPayablePrice.textContent = "₹200";
+      return;
+    }
+
+    if (pointsZeroHint) pointsZeroHint.classList.add("hidden");
+    if (redeemPointsCheckbox) redeemPointsCheckbox.disabled = false;
+
+    if (pointsRedeemRange) {
+      pointsRedeemRange.max = maxRedeemable;
+      if (Number(pointsRedeemRange.value) > maxRedeemable || Number(pointsRedeemRange.value) === 0) {
+        pointsRedeemRange.value = maxRedeemable;
+      }
+    }
+
+    if (maxRedeemNotice) {
+      maxRedeemNotice.textContent = `Up to ${maxRedeemable} Pts (₹${maxRedeemable} discount)`;
+    }
+
+    const isRedeeming = redeemPointsCheckbox && redeemPointsCheckbox.checked;
+
+    if (isRedeeming) {
+      if (pointsRedeemSliderWrap) pointsRedeemSliderWrap.classList.remove("hidden");
+      const redeemVal = pointsRedeemRange ? Number(pointsRedeemRange.value) : maxRedeemable;
+      const discount = redeemVal * 1;
+      const payable = Math.max(100, 200 - discount);
+
+      if (pointsRedeemedDisplay) pointsRedeemedDisplay.textContent = `${redeemVal} Pts (-₹${discount})`;
+      if (appliedDiscountNotice) {
+        appliedDiscountNotice.textContent = `Includes ₹${discount} Swachhata discount (${redeemVal} Pts redeemed)`;
+        appliedDiscountNotice.classList.remove("hidden");
+      }
+      if (originalPriceStrikethrough) originalPriceStrikethrough.classList.remove("hidden");
+      if (finalPayablePrice) finalPayablePrice.textContent = `₹${payable}`;
+    } else {
+      if (pointsRedeemSliderWrap) pointsRedeemSliderWrap.classList.add("hidden");
+      if (originalPriceStrikethrough) originalPriceStrikethrough.classList.add("hidden");
+      if (appliedDiscountNotice) appliedDiscountNotice.classList.add("hidden");
+      if (finalPayablePrice) finalPayablePrice.textContent = "₹200";
+      if (pointsRedeemedDisplay) pointsRedeemedDisplay.textContent = `0 Pts (-₹0)`;
+    }
+  }
+
+  if (redeemPointsCheckbox) {
+    redeemPointsCheckbox.addEventListener("change", () => {
+      if (redeemPointsCheckbox.checked && pointsRedeemRange) {
+        const userPts = (currentUser && typeof currentUser.swachhtaPoints === 'number') ? currentUser.swachhtaPoints : 0;
+        pointsRedeemRange.value = Math.min(100, userPts);
+      }
+      updatePickupPricingUI();
+    });
+  }
+
+  if (pointsRedeemRange) {
+    pointsRedeemRange.addEventListener("input", () => {
+      updatePickupPricingUI();
+    });
+  }
 
   if (pickupForm && pickupSuccessAlert) {
     pickupForm.addEventListener("submit", async (e) => {
@@ -857,6 +1072,10 @@ document.addEventListener("DOMContentLoaded", () => {
       const address = document.getElementById("pickupAddress").value.trim();
       const scheduledDate = document.getElementById("pickupDate").value;
 
+      // Swachhata Points to redeem (1 point = ₹1, up to 100 points max)
+      const isRedeemChecked = redeemPointsCheckbox && redeemPointsCheckbox.checked;
+      const pointsToRedeem = (isRedeemChecked && pointsRedeemRange) ? Number(pointsRedeemRange.value) : 0;
+
       try {
         const response = await fetch("/api/pickups", {
           method: "POST",
@@ -867,7 +1086,8 @@ document.addEventListener("DOMContentLoaded", () => {
           body: JSON.stringify({
             wasteType,
             address,
-            scheduledDate
+            scheduledDate,
+            redeemPoints: pointsToRedeem
           })
         });
 
@@ -878,13 +1098,36 @@ document.addEventListener("DOMContentLoaded", () => {
           return;
         }
 
+        // Update local user points balance
+        if (data.updatedUserPoints !== undefined) {
+          if (currentUser) currentUser.swachhtaPoints = data.updatedUserPoints;
+          const navSwachhtaPointsVal = document.getElementById("navSwachhtaPointsVal");
+          const citizenSwachhtaPoints = document.getElementById("citizenSwachhtaPoints");
+          if (navSwachhtaPointsVal) navSwachhtaPointsVal.textContent = data.updatedUserPoints;
+          if (citizenSwachhtaPoints) citizenSwachhtaPoints.textContent = data.updatedUserPoints;
+        }
+
         if (pickupBookingId) {
           pickupBookingId.innerHTML = `${data.pickup.pickupId} &nbsp;&bull;&nbsp; <button type="button" class="btn btn-sm btn-ghost" style="text-decoration:underline; font-weight:700; color:var(--primary); padding:2px 8px; font-size:11px; margin-left:4px; cursor:pointer;" onclick="window.trackPickupRef && window.trackPickupRef('${data.pickup.pickupId}')">Track Van Live ➔</button>`;
+        }
+
+        if (pickupSuccessPaidVal) {
+          const finalFee = data.pickup.finalFee !== undefined ? data.pickup.finalFee : 200;
+          const discount = data.pickup.discountAmount || (data.pickup.redeemedPoints ? data.pickup.redeemedPoints * 1 : 0);
+          pickupSuccessPaidVal.textContent = discount > 0
+            ? `₹${finalFee} (Saved ₹${discount} via ${data.pickup.redeemedPoints} Swachhata Pts!)`
+            : `₹${finalFee}`;
+        }
+
+        const pickupSuccessBookedTime = document.getElementById("pickupSuccessBookedTime");
+        if (pickupSuccessBookedTime) {
+          pickupSuccessBookedTime.textContent = formatDateTime(data.pickup.createdAt ? new Date(data.pickup.createdAt) : new Date());
         }
 
         pickupSuccessAlert.classList.remove("hidden");
         pickupSuccessAlert.scrollIntoView({ behavior: "smooth", block: "nearest" });
         pickupForm.reset();
+        updatePickupPricingUI();
         loadCitizenStats();
 
         // Also auto-load this newly requested pickup into the truck tracker column
@@ -1031,8 +1274,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const liveDate = document.getElementById("liveDate");
   if (liveDate) {
-    const options = { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' };
-    liveDate.textContent = new Date().toLocaleDateString(undefined, options);
+    updateLiveClocks();
   }
 
   // Complaints Table Status Filter Tabs
@@ -1310,6 +1552,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     if (verifyReporter) verifyReporter.textContent = c.isAnonymous ? 'Anonymous Citizen' : (c.reporterName || 'Citizen');
     if (verifyDesc) verifyDesc.textContent = c.description || 'No additional details entered.';
+    const verifyReportedTime = document.getElementById("verifyReportedTime");
+    if (verifyReportedTime) {
+      verifyReportedTime.textContent = formatDateTime(c.createdAt || new Date());
+    }
     if (verifyBadge) {
       verifyBadge.textContent = c.status;
       const statusClass = c.status === "Resolved" ? "badge-green" : (c.status === "In-Progress" || c.status === "Assigned") ? "badge-blue" : "badge-amber";
@@ -1510,7 +1756,10 @@ document.addEventListener("DOMContentLoaded", () => {
           <span class="badge-status ${statusClass}">${c.status}</span>
           ${pointsTag}
         </td>
-        <td>${new Date(c.createdAt).toLocaleDateString()}</td>
+        <td>
+          <div style="font-weight: 600; font-size: 0.84rem; color: var(--text-color);">${new Date(c.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
+          <div style="font-size: 0.74rem; color: var(--text-secondary); margin-top: 2px;">${new Date(c.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}</div>
+        </td>
         <td>
           <div class="action-column-wrap">
             <select class="form-control status-update-select" data-id="${c.complaintId}" style="width: auto; padding: 0.25rem 0.5rem; font-size: 0.78rem;">
@@ -1681,13 +1930,26 @@ document.addEventListener("DOMContentLoaded", () => {
       const vehicleInfo = `${p.assignedVehicle || 'VAN-SPEC-02'} (${p.truckNumber || 'KA-01-EA-4920'})`;
       const currentNote = p.adminRemarks || p.progressNote || '';
 
+      const fee = p.finalFee !== undefined ? p.finalFee : 200;
+      const discount = p.discountAmount || (p.redeemedPoints ? p.redeemedPoints * 1 : 0);
+      const feeBadge = discount > 0
+        ? `<div style="font-size:0.75rem; color:#059669; font-weight:700; margin-top:3px;">₹${fee} <span style="text-decoration:line-through; color:#94a3b8; font-weight:normal;">₹200</span> (-₹${discount} Pts)</div>`
+        : `<div style="font-size:0.75rem; color:#64748b; font-weight:600; margin-top:3px;">Tariff: ₹${fee}</div>`;
+
       tr.innerHTML = `
         <td><strong>${p.pickupId}</strong></td>
         <td>${p.wasteType}</td>
         <td>${p.address}</td>
-        <td>${new Date(p.scheduledDate).toLocaleDateString()}</td>
+        <td>
+          <div style="font-weight: 600; font-size: 0.84rem; color: var(--text-color);">${new Date(p.scheduledDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
+          <div style="font-size: 0.74rem; color: var(--text-secondary); margin-top: 2px;">Slot: 09:00 AM - 12:00 PM</div>
+          ${p.createdAt ? `<div style="font-size: 0.70rem; color: var(--text-muted, #94a3b8); margin-top: 2px;">Booked: ${formatDateTime(p.createdAt)}</div>` : ''}
+        </td>
         <td><code>${vehicleInfo}</code></td>
-        <td><span class="badge-status ${statusClass}">${p.status}</span></td>
+        <td>
+          <span class="badge-status ${statusClass}">${p.status}</span>
+          ${feeBadge}
+        </td>
         <td>
           <div class="action-column-wrap" style="display:flex; flex-direction:column; gap:0.35rem; min-width:260px;">
             <div style="display:flex; align-items:center; gap:0.4rem;">
@@ -1853,7 +2115,7 @@ document.addEventListener("DOMContentLoaded", () => {
           <span class="feedback-stars">${stars}</span>
         </div>
         <p class="feedback-comment">"${c.feedbackComment || 'Civic waste reported was promptly cleared and sanitized.'}"</p>
-        <div class="feedback-meta">Ticket: <strong>${c.complaintId}</strong> &bull; ${new Date(c.updatedAt || c.createdAt).toLocaleDateString()}</div>
+        <div class="feedback-meta">Ticket: <strong>${c.complaintId}</strong> &bull; ${formatRelativeOrDateTime(c.updatedAt || c.createdAt)}</div>
       `;
       feedbackGrid.appendChild(card);
     });
@@ -1955,7 +2217,7 @@ document.addEventListener("DOMContentLoaded", () => {
         <div style="font-size:12px; color:#475569; margin-bottom:4px;"><b>Category:</b> ${c.category}</div>
         <div style="font-size:12px; color:#475569; margin-bottom:4px;"><b>Location:</b> ${c.locationText || 'Geotagged'}</div>
         <div style="font-size:11px; color:#64748b; margin-bottom:4px;"><b>GPS:</b> <code>${coordsStr}</code></div>
-        <div style="font-size:11px; color:#64748b; margin-bottom:4px;"><b>Reported:</b> ${new Date(c.createdAt).toLocaleDateString()} by ${c.isAnonymous ? 'Anonymous Citizen' : (c.reporterName || 'Citizen')}</div>
+        <div style="font-size:11px; color:#64748b; margin-bottom:4px;"><b>Reported:</b> ${formatDateTime(c.createdAt)} by ${c.isAnonymous ? 'Anonymous Citizen' : (c.reporterName || 'Citizen')}</div>
         ${c.adminRemarks ? `
           <div style="margin-top:6px; padding:6px 8px; background:#f0fdf4; border-left:3px solid #10b981; border-radius:3px; font-size:11px; color:#166534; line-height:1.4;">
             <strong>Officer Action:</strong> ${c.adminRemarks}
@@ -2272,6 +2534,10 @@ document.addEventListener("DOMContentLoaded", () => {
       if (citizenSwachhtaPoints) citizenSwachhtaPoints.textContent = "0";
       if (navSwachhtaPointsVal) navSwachhtaPointsVal.textContent = "0";
     }
+
+    if (typeof updatePickupPricingUI === 'function') {
+      updatePickupPricingUI();
+    }
   }
 
   // Helper to safely parse API responses even if server returns HTML error pages (404, 500, 504)
@@ -2543,6 +2809,9 @@ document.addEventListener("DOMContentLoaded", () => {
             const pts = meData.user.swachhtaPoints || 0;
             if (swachhtaEl) swachhtaEl.textContent = pts;
             if (navSwachhtaPointsVal) navSwachhtaPointsVal.textContent = pts;
+            if (typeof updatePickupPricingUI === 'function') {
+              updatePickupPricingUI();
+            }
           }
         }
 
@@ -2572,6 +2841,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   checkSession();
   loadCitizenStats();
+  if (typeof updatePickupPricingUI === 'function') {
+    updatePickupPricingUI();
+  }
 
   // Auto-initialize dual column trackers with live demonstration data
   setTimeout(() => {

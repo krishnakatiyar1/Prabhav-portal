@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Pickup = require('../models/Pickup');
+const User = require('../models/User');
 const { authMiddleware, adminMiddleware } = require('../middleware/auth');
 
 // Haversine formula to compute distance in meters between two coordinates
@@ -20,7 +21,7 @@ function calculateHaversineDistance(lat1, lon1, lat2, lon2) {
 // POST /api/pickups - Citizen creates a bulky waste pickup request
 router.post('/', authMiddleware, async (req, res) => {
   try {
-    const { wasteType, address, scheduledDate, coordinates } = req.body;
+    const { wasteType, address, scheduledDate, coordinates, redeemPoints } = req.body;
 
     if (!wasteType || !address || !scheduledDate) {
       return res.status(400).json({ error: 'Waste type, address, and scheduled date are required.' });
@@ -35,6 +36,39 @@ router.post('/', authMiddleware, async (req, res) => {
     let coords = { lat: 12.9716, lng: 77.5946 };
     if (coordinates && typeof coordinates.lat === 'number' && typeof coordinates.lng === 'number') {
       coords = { lat: coordinates.lat, lng: coordinates.lng };
+    }
+
+    // Swachhata Points Redemption Calculation
+    // Doorstep pickup base charge = ₹200
+    // User can redeem up to 100 points (1 point = ₹1), getting up to ₹100 discount (paying ₹100 instead of ₹200)
+    const BASE_FEE = 200;
+    const MAX_REDEEM_POINTS = 100;
+
+    const userDoc = await User.findById(req.user._id);
+    if (!userDoc) {
+      return res.status(404).json({ error: 'Citizen user profile not found.' });
+    }
+
+    const availablePoints = Math.max(0, userDoc.swachhtaPoints || 0);
+    let pointsToRedeem = 0;
+
+    if (redeemPoints !== undefined && redeemPoints !== null && redeemPoints !== false) {
+      let requested = 0;
+      if (typeof redeemPoints === 'boolean') {
+        requested = redeemPoints ? Math.min(availablePoints, MAX_REDEEM_POINTS) : 0;
+      } else {
+        requested = Math.max(0, Math.floor(Number(redeemPoints) || 0));
+      }
+      pointsToRedeem = Math.min(requested, availablePoints, MAX_REDEEM_POINTS);
+    }
+
+    const discountAmount = pointsToRedeem * 1; // 1 point = ₹1
+    const finalFee = BASE_FEE - discountAmount; // Paying ₹100 - ₹200
+
+    // Deduct redeemed points from user balance
+    if (pointsToRedeem > 0) {
+      userDoc.swachhtaPoints = Math.max(0, userDoc.swachhtaPoints - pointsToRedeem);
+      await userDoc.save();
     }
 
     // Generate unique pickup ID (e.g., PU-8821)
@@ -59,6 +93,11 @@ router.post('/', authMiddleware, async (req, res) => {
       coordinates: coords,
       scheduledDate: parsedDate,
       status: 'Requested',
+      baseFee: BASE_FEE,
+      redeemedPoints: pointsToRedeem,
+      discountAmount,
+      finalFee,
+      paymentStatus: 'Paid',
       assignedVehicle: 'VAN-SPEC-02',
       truckNumber: 'KA-01-EA-4920',
       driverName: 'Rajesh Kumar (Senior Crew Lead)',
@@ -78,8 +117,18 @@ router.post('/', authMiddleware, async (req, res) => {
 
     return res.status(201).json({
       success: true,
-      message: 'Bulky waste pickup requested successfully.',
-      pickup: newPickup
+      message: pointsToRedeem > 0
+        ? `Bulky waste pickup requested successfully! Redeemed ${pointsToRedeem} Swachhata points (Saved ₹${discountAmount}).`
+        : 'Bulky waste pickup requested successfully.',
+      pickup: newPickup,
+      redemption: {
+        baseFee: BASE_FEE,
+        pointsRedeemed: pointsToRedeem,
+        discountAmount,
+        finalFee,
+        newPointsBalance: userDoc.swachhtaPoints
+      },
+      updatedUserPoints: userDoc.swachhtaPoints
     });
   } catch (err) {
     return res.status(500).json({ error: 'Server error while scheduling pickup request.' });
