@@ -438,6 +438,15 @@ document.addEventListener("DOMContentLoaded", () => {
         } else if (complaint.status === 'Resolved') {
           stepDetailMessage.innerHTML = `Municipal waste cleared successfully and area sanitized.`;
         }
+
+        if (complaint.adminRemarks && complaint.adminRemarks.trim().length > 0) {
+          stepDetailMessage.innerHTML += `
+            <div class="admin-progress-live-note" style="margin-top:0.65rem; padding:0.5rem 0.75rem; background:var(--surface-soft, #f8fafc); border-left:3px solid var(--primary, #059669); border-radius:4px; font-size:0.88rem; color:var(--text, #1e293b);">
+              <span style="font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; color:var(--primary, #059669); display:block; margin-bottom:2px;">📢 Live Officer Progress Note:</span>
+              "${complaint.adminRemarks}"
+            </div>
+          `;
+        }
       }
 
       // Connect Municipal Action & Resolution Proof Showcase (Before & After Photos + Remarks)
@@ -624,9 +633,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const pickupDriverCallBtn = document.getElementById("pickupDriverCallBtn");
   const pickupDriverPhone = document.getElementById("pickupDriverPhone");
   const pickupLiveStatusPill = document.getElementById("pickupLiveStatusPill");
+  const pickupAdminProgressText = document.getElementById("pickupAdminProgressText");
 
-  let pickupTruckMapInstance = null;
-  let pickupTruckMapLayerGroup = null;
   let currentTrackedPickup = null;
 
   async function updatePickupTrackerUI(pickupId) {
@@ -692,10 +700,27 @@ document.addEventListener("DOMContentLoaded", () => {
         pickupStepperProgressBar.style.width = pcts[currentStep] || "0%";
       }
 
-      // Status Badge and Detail Message
+      // Status Badge
       if (pickupStatusBadge) {
         pickupStatusBadge.textContent = `Status: ${p.status}`;
         pickupStatusBadge.className = `detail-badge ${p.status === 'Collected' || p.status === 'Completed' ? 'badge-green' : (p.status === 'In-Transit' || p.status === 'Scheduled') ? 'in-progress-badge' : 'badge-amber'}`;
+      }
+
+      // Custom Admin Progress Note & Detail Message
+      const defaultPickupNotes = {
+        'Requested': 'Pickup request logged. Dispatch team is preparing vehicle assignment.',
+        'Scheduled': 'Vehicle scheduled for collection slot. Awaiting dispatch to your sector.',
+        'In-Transit': 'The truck is dispatched and currently en route to your address.',
+        'Collected': 'Special waste collected successfully from your doorstep.',
+        'Completed': 'Special waste collected and transferred to recycling facility.'
+      };
+
+      const customPickupNote = (p.adminRemarks || p.progressNote || '').trim();
+      const displayNote = customPickupNote || defaultPickupNotes[p.status] || 'The truck is dispatched and active.';
+
+      const progressTextEl = document.getElementById("pickupAdminProgressText");
+      if (progressTextEl) {
+        progressTextEl.textContent = displayNote;
       }
 
       if (pickupStepDetailMessage) {
@@ -704,9 +729,18 @@ document.addEventListener("DOMContentLoaded", () => {
         } else if (p.status === 'Scheduled') {
           pickupStepDetailMessage.innerHTML = `Collection vehicle <strong>${p.assignedVehicle || 'VAN-SPEC-02'}</strong> scheduled. Route preparation in progress for your slot.`;
         } else if (p.status === 'In-Transit') {
-          pickupStepDetailMessage.innerHTML = `Municipal Sanitation Truck <strong>${p.assignedVehicle || 'VAN-SPEC-02'}</strong> is on the road and en route to your address.`;
+          pickupStepDetailMessage.innerHTML = `Municipal Sanitation Truck <strong>${p.assignedVehicle || 'VAN-SPEC-02'}</strong> is on the road and en route.`;
         } else if (p.status === 'Collected' || p.status === 'Completed') {
           pickupStepDetailMessage.innerHTML = `Special waste loaded and collected successfully from your doorstep by crew lead <strong>${p.driverName || 'Municipal Team'}</strong>.`;
+        }
+
+        if (customPickupNote) {
+          pickupStepDetailMessage.innerHTML += `
+            <div class="admin-progress-live-note" style="margin-top:0.65rem; padding:0.5rem 0.75rem; background:var(--surface-soft, #f8fafc); border-left:3px solid var(--primary, #059669); border-radius:4px; font-size:0.88rem; color:var(--text, #1e293b);">
+              <span style="font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; color:var(--primary, #059669); display:block; margin-bottom:2px;">📢 Live Officer Progress Note:</span>
+              "${customPickupNote}"
+            </div>
+          `;
         }
       }
 
@@ -737,7 +771,7 @@ document.addEventListener("DOMContentLoaded", () => {
         } else if (p.status === 'Requested') {
           pickupTelemetryText.textContent = 'Vehicle will be dispatched from Zonal Depot on the scheduled date.';
         } else {
-          pickupTelemetryText.textContent = `Cruising at ${p.truckLocation?.speedKmH || 26} km/h towards ${p.address || 'doorstep'}. Please keep bulky items accessible.`;
+          pickupTelemetryText.textContent = customPickupNote || `Cruising at ${p.truckLocation?.speedKmH || 26} km/h towards ${p.address || 'doorstep'}. Please keep bulky items accessible.`;
         }
       }
 
@@ -748,113 +782,18 @@ document.addEventListener("DOMContentLoaded", () => {
         } else if (p.status === 'Requested') {
           pickupLiveStatusPill.className = 'crew-status-pill badge-amber';
           pickupLiveStatusPill.textContent = 'Awaiting Dispatch';
-        } else {
+        } else if (p.status === 'In-Transit') {
           pickupLiveStatusPill.className = 'crew-status-pill badge-green';
-          pickupLiveStatusPill.textContent = 'Live GPS Active';
+          pickupLiveStatusPill.textContent = customPickupNote ? 'Updated by Admin' : 'The truck is dispatched';
+        } else {
+          pickupLiveStatusPill.className = 'crew-status-pill badge-blue';
+          pickupLiveStatusPill.textContent = 'Scheduled';
         }
       }
-
-      // Render Leaflet Truck Map
-      renderPickupTruckMap(p);
 
     } catch (err) {
       console.warn("Error tracking pickup:", err);
     }
-  }
-
-  // Render Interactive Leaflet Map for Truck and Doorstep
-  function renderPickupTruckMap(pickup) {
-    const mapContainer = document.getElementById("pickupTruckMap");
-    if (!mapContainer || typeof L === 'undefined') return;
-
-    const destLat = (pickup.coordinates && typeof pickup.coordinates.lat === 'number') ? pickup.coordinates.lat : 12.9716;
-    const destLng = (pickup.coordinates && typeof pickup.coordinates.lng === 'number') ? pickup.coordinates.lng : 77.5946;
-
-    let truckLat = (pickup.truckLocation && typeof pickup.truckLocation.lat === 'number') ? pickup.truckLocation.lat : (destLat - 0.012);
-    let truckLng = (pickup.truckLocation && typeof pickup.truckLocation.lng === 'number') ? pickup.truckLocation.lng : (destLng - 0.009);
-
-    if (pickup.status === 'Collected' || pickup.status === 'Completed') {
-      truckLat = destLat;
-      truckLng = destLng;
-    }
-
-    if (!pickupTruckMapInstance) {
-      pickupTruckMapInstance = L.map('pickupTruckMap', { zoomControl: true }).setView([destLat, destLng], 14);
-      L.tileLayer(OSM_TILE_URL, OSM_TILE_OPTIONS).addTo(pickupTruckMapInstance);
-      pickupTruckMapLayerGroup = L.layerGroup().addTo(pickupTruckMapInstance);
-    } else {
-      pickupTruckMapLayerGroup.clearLayers();
-    }
-
-    // Doorstep Pin (Home/Green)
-    const doorstepIcon = L.divIcon({
-      className: 'leaflet-doorstep-pin-container',
-      html: `
-        <div class="leaflet-doorstep-pin-icon" title="Your Doorstep">
-          🏠
-        </div>
-      `,
-      iconSize: [32, 32],
-      iconAnchor: [16, 16],
-      popupAnchor: [0, -16]
-    });
-
-    const doorstepMarker = L.marker([destLat, destLng], { icon: doorstepIcon })
-      .bindPopup(`
-        <div style="font-family:Inter,sans-serif; font-size:12px; color:#0f172a; padding:2px;">
-          <strong style="color:#059669;">🏠 Your Doorstep Pickup Point</strong><br>
-          <span>${pickup.address}</span><br>
-          <small style="color:#64748b;">Waste: ${pickup.wasteType}</small>
-        </div>
-      `);
-    pickupTruckMapLayerGroup.addLayer(doorstepMarker);
-
-    // Truck Pin (Van/Blue with animated pulse)
-    const truckIcon = L.divIcon({
-      className: 'leaflet-truck-pin-container',
-      html: `
-        <div class="leaflet-truck-pin-pulse"></div>
-        <div class="leaflet-truck-pin-icon" title="Municipal Sanitation Truck">
-          🚛
-        </div>
-      `,
-      iconSize: [44, 44],
-      iconAnchor: [22, 22],
-      popupAnchor: [0, -22]
-    });
-
-    const truckMarker = L.marker([truckLat, truckLng], { icon: truckIcon })
-      .bindPopup(`
-        <div style="font-family:Inter,sans-serif; font-size:12px; color:#0f172a; padding:2px;">
-          <strong style="color:#0284c7;">🚛 ${pickup.assignedVehicle || 'Sanitation Truck'}</strong><br>
-          <span>Plate: <code>${pickup.truckNumber || 'KA-01-EA-4920'}</code></span><br>
-          <span>Driver: ${pickup.driverName || 'Rajesh Kumar'}</span><br>
-          <small style="color:#64748b;">${pickup.status === 'Collected' ? 'At destination' : 'En-route to doorstep'}</small>
-        </div>
-      `);
-    pickupTruckMapLayerGroup.addLayer(truckMarker);
-
-    // Connect with dashed polyline route
-    if (pickup.status !== 'Collected' && pickup.status !== 'Completed') {
-      const routePolyline = L.polyline([
-        [truckLat, truckLng],
-        [destLat, destLng]
-      ], {
-        color: '#0284c7',
-        weight: 3.5,
-        dashArray: '6, 8',
-        opacity: 0.85
-      });
-      pickupTruckMapLayerGroup.addLayer(routePolyline);
-    }
-
-    // Fit bounds to show both truck and destination nicely
-    const bounds = L.latLngBounds([[destLat, destLng], [truckLat, truckLng]]);
-    pickupTruckMapInstance.fitBounds(bounds, { padding: [35, 35], maxZoom: 15 });
-
-    setTimeout(() => {
-      if (pickupTruckMapInstance) pickupTruckMapInstance.invalidateSize();
-    }, 250);
   }
 
   // Quick Chips & Form Event Listeners
@@ -1639,13 +1578,25 @@ document.addEventListener("DOMContentLoaded", () => {
           });
 
           if (patchRes.ok) {
-            alert(`✓ Action remarks saved for ${cid}.`);
-            loadAdminDashboard();
+            btn.textContent = "✓ Saved";
+            btn.style.background = "#059669";
+            btn.style.color = "#ffffff";
+            c.adminRemarks = remarks;
+            setTimeout(() => {
+              btn.textContent = "Save";
+              btn.disabled = false;
+              btn.style.background = "";
+              btn.style.color = "";
+            }, 1200);
           } else {
+            btn.textContent = "Save";
+            btn.disabled = false;
             const err = await patchRes.json();
             alert(err.error || "Failed to save remarks.");
           }
         } catch (err) {
+          btn.textContent = "Save";
+          btn.disabled = false;
           alert("Error saving remarks.");
         }
       });
@@ -1679,6 +1630,9 @@ document.addEventListener("DOMContentLoaded", () => {
           return;
         }
 
+        const input = tbody.querySelector(`.admin-action-input[data-id="${complaintId}"]`);
+        const currentRemarks = input ? input.value.trim() : (c ? c.adminRemarks : '');
+
         const token = localStorage.getItem(TOKEN_KEY);
         try {
           const patchRes = await fetch(`/api/complaints/${complaintId}/status`, {
@@ -1689,7 +1643,7 @@ document.addEventListener("DOMContentLoaded", () => {
             },
             body: JSON.stringify({
               status: newStatus,
-              adminRemarks: c ? c.adminRemarks : ''
+              adminRemarks: currentRemarks
             })
           });
 
@@ -1725,6 +1679,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const tr = document.createElement("tr");
       const statusClass = (p.status === "Collected" || p.status === "Completed") ? "badge-green" : (p.status === "In-Transit" || p.status === "Scheduled") ? "badge-blue" : "badge-amber";
       const vehicleInfo = `${p.assignedVehicle || 'VAN-SPEC-02'} (${p.truckNumber || 'KA-01-EA-4920'})`;
+      const currentNote = p.adminRemarks || p.progressNote || '';
 
       tr.innerHTML = `
         <td><strong>${p.pickupId}</strong></td>
@@ -1734,24 +1689,100 @@ document.addEventListener("DOMContentLoaded", () => {
         <td><code>${vehicleInfo}</code></td>
         <td><span class="badge-status ${statusClass}">${p.status}</span></td>
         <td>
-          <div style="display:flex; align-items:center; gap:0.4rem;">
-            <select class="form-control pickup-status-select" data-id="${p.pickupId}" style="width: auto; display: inline-block; padding: 0.25rem 0.5rem; font-size: 0.78rem;">
-              <option value="Requested" ${p.status === "Requested" ? "selected" : ""}>Requested</option>
-              <option value="Scheduled" ${p.status === "Scheduled" ? "selected" : ""}>Scheduled</option>
-              <option value="In-Transit" ${p.status === "In-Transit" ? "selected" : ""}>In-Transit</option>
-              <option value="Collected" ${p.status === "Collected" || p.status === "Completed" ? "selected" : ""}>Collected</option>
-            </select>
-            <a href="/#track" target="_blank" class="btn btn-sm btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" title="View Live Truck Radar">Track Van</a>
+          <div class="action-column-wrap" style="display:flex; flex-direction:column; gap:0.35rem; min-width:260px;">
+            <div style="display:flex; align-items:center; gap:0.4rem;">
+              <select class="form-control pickup-status-select" data-id="${p.pickupId}" style="flex:1; padding:0.25rem 0.5rem; font-size:0.78rem;">
+                <option value="Requested" ${p.status === "Requested" ? "selected" : ""}>Requested</option>
+                <option value="Scheduled" ${p.status === "Scheduled" ? "selected" : ""}>Scheduled</option>
+                <option value="In-Transit" ${p.status === "In-Transit" ? "selected" : ""}>In-Transit (Dispatched)</option>
+                <option value="Collected" ${p.status === "Collected" || p.status === "Completed" ? "selected" : ""}>Collected</option>
+              </select>
+              <a href="/#track" target="_blank" class="btn btn-xs btn-outline" style="padding:0.25rem 0.5rem; font-size:0.75rem; white-space:nowrap;" title="View Citizen Tracker">Track</a>
+            </div>
+            <div class="action-remarks-row" style="display:flex; gap:0.35rem; align-items:center;">
+              <input type="text" class="form-control admin-pickup-progress-input" data-id="${p.pickupId}" placeholder="e.g. The truck is dispatched..." value="${currentNote}" title="Enter custom progress text (e.g. The truck is dispatched)" style="font-size:0.78rem; padding:0.25rem 0.5rem; flex:1;">
+              <button type="button" class="btn btn-xs btn-primary btn-save-pickup-progress" data-id="${p.pickupId}" title="Save Progress Update">Save</button>
+            </div>
           </div>
         </td>
       `;
       tbody.appendChild(tr);
     });
 
+    // Save custom progress update for pickup
+    const savePickupBtns = tbody.querySelectorAll(".btn-save-pickup-progress");
+    savePickupBtns.forEach((btn) => {
+      btn.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        const pickupId = btn.getAttribute("data-id");
+        const input = tbody.querySelector(`.admin-pickup-progress-input[data-id="${pickupId}"]`);
+        const sel = tbody.querySelector(`.pickup-status-select[data-id="${pickupId}"]`);
+        if (!input || !sel) return;
+
+        const remarks = input.value.trim();
+        const newStatus = sel.value;
+        const token = localStorage.getItem(TOKEN_KEY);
+
+        try {
+          btn.textContent = "...";
+          btn.disabled = true;
+          const patchRes = await fetch(`/api/pickups/${pickupId}/status`, {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              status: newStatus,
+              adminRemarks: remarks,
+              progressNote: remarks
+            })
+          });
+
+          if (patchRes.ok) {
+            btn.textContent = "✓ Saved";
+            btn.style.background = "#059669";
+            btn.style.color = "#ffffff";
+            setTimeout(() => {
+              btn.textContent = "Save";
+              btn.disabled = false;
+              btn.style.background = "";
+              btn.style.color = "";
+            }, 1200);
+          } else {
+            btn.textContent = "Save";
+            btn.disabled = false;
+            const errData = await patchRes.json();
+            alert(errData.error || "Failed to update pickup progress.");
+          }
+        } catch (err) {
+          btn.textContent = "Save";
+          btn.disabled = false;
+          alert("Error saving pickup progress.");
+        }
+      });
+    });
+
+    // Support Enter key inside pickup progress input
+    const pickupInputs = tbody.querySelectorAll(".admin-pickup-progress-input");
+    pickupInputs.forEach((inp) => {
+      inp.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          const pickupId = inp.getAttribute("data-id");
+          const btn = tbody.querySelector(`.btn-save-pickup-progress[data-id="${pickupId}"]`);
+          if (btn) btn.click();
+        }
+      });
+    });
+
+    // Status select change
     const selects = tbody.querySelectorAll(".pickup-status-select");
     selects.forEach((sel) => {
       sel.addEventListener("change", async () => {
         const pickupId = sel.getAttribute("data-id");
+        const input = tbody.querySelector(`.admin-pickup-progress-input[data-id="${pickupId}"]`);
+        const remarks = input ? input.value.trim() : "";
         const newStatus = sel.value;
         const token = localStorage.getItem(TOKEN_KEY);
 
@@ -1762,7 +1793,11 @@ document.addEventListener("DOMContentLoaded", () => {
               "Content-Type": "application/json",
               "Authorization": `Bearer ${token}`
             },
-            body: JSON.stringify({ status: newStatus })
+            body: JSON.stringify({
+              status: newStatus,
+              adminRemarks: remarks,
+              progressNote: remarks
+            })
           });
 
           if (patchRes.ok) {

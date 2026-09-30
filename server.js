@@ -104,7 +104,8 @@ async function seedDefaults() {
           speedKmH: 28,
           lastUpdated: new Date()
         },
-        etaMinutes: 14
+        etaMinutes: 14,
+        adminRemarks: 'The truck is dispatched and currently en route to your sector.'
       });
 
       await Pickup.create({
@@ -127,7 +128,8 @@ async function seedDefaults() {
           speedKmH: 20,
           lastUpdated: new Date()
         },
-        etaMinutes: 28
+        etaMinutes: 28,
+        adminRemarks: 'Vehicle scheduled for morning collection slot at 10:30 AM.'
       });
       console.log('✓ Seeded pickups PU-8821 and PU-8819');
     }

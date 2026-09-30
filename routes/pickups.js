@@ -169,7 +169,7 @@ router.get('/:id', async (req, res) => {
 // PATCH /api/pickups/:id/status - Only admin can change pickup status and vehicle assignment
 router.patch('/:id/status', authMiddleware, adminMiddleware, async (req, res) => {
   try {
-    const { status, assignedVehicle, truckNumber, driverName, driverPhone, truckLocation } = req.body;
+    const { status, assignedVehicle, truckNumber, driverName, driverPhone, truckLocation, adminRemarks, progressNote } = req.body;
     const validStatuses = ['Requested', 'Scheduled', 'In-Transit', 'Collected', 'Completed', 'Cancelled'];
 
     const query = req.params.id;
@@ -187,6 +187,12 @@ router.patch('/:id/status', authMiddleware, adminMiddleware, async (req, res) =>
         return res.status(400).json({ error: `Invalid status. Must be one of: ${validStatuses.join(', ')}` });
       }
       pickup.status = status;
+    }
+
+    const customNote = adminRemarks !== undefined ? adminRemarks : progressNote;
+    if (typeof customNote === 'string') {
+      pickup.adminRemarks = customNote.trim();
+      pickup.progressNote = customNote.trim();
     }
 
     if (assignedVehicle) pickup.assignedVehicle = assignedVehicle.trim();

@@ -776,11 +776,11 @@
               <p id="pickupStepDetailMessage">Municipal Sanitation Truck <strong>VAN-SPEC-02</strong> is active and currently navigating towards your pickup address.</p>
             </div>
 
-            <!-- Live Truck Radar & Mini-Map Card -->
+            <!-- Live Truck Radar & Dispatch Update Card -->
             <div class="pickup-truck-radar-card" id="pickupTruckRadarCard">
               <div class="radar-card-header">
                 <div class="radar-title-box">
-                  <span class="radar-live-indicator"><span class="radar-ping"></span> LIVE GPS RADAR</span>
+                  <span class="radar-live-indicator"><span class="radar-ping"></span> MUNICIPAL DISPATCH STATUS</span>
                   <h4 class="radar-truck-name" id="pickupTruckName">Van VAN-SPEC-02</h4>
                 </div>
                 <div class="radar-eta-badge" id="pickupEtaBadge">
@@ -792,11 +792,21 @@
                 </div>
               </div>
 
-              <!-- Leaflet Map Container for Truck -->
-              <div id="pickupTruckMap" class="pickup-leaflet-map" style="height: 250px; width: 100%; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-top: 0.75rem; position: relative; z-index: 1;"></div>
+              <!-- Officer Progress Update Box (Replaces Map) -->
+              <div class="pickup-admin-update-box" id="pickupAdminUpdateBox" style="margin-top: 0.85rem; padding: 0.85rem 1rem; background: var(--surface-soft, #f8fafc); border: 1px solid var(--border-color, #e2e8f0); border-left: 4px solid var(--primary, #059669); border-radius: var(--radius-sm, 6px);">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.35rem;">
+                  <span style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--primary, #059669);">
+                    📢 Admin Progress Update
+                  </span>
+                  <span class="crew-status-pill badge-green" id="pickupLiveStatusPill" style="font-size: 0.7rem; padding: 0.15rem 0.5rem;">Live Signal Active</span>
+                </div>
+                <p id="pickupAdminProgressText" style="font-size: 0.92rem; color: var(--text-color, #1e293b); font-weight: 500; margin: 0; line-height: 1.45;">
+                  The truck is dispatched and currently en route to your sector.
+                </p>
+              </div>
 
               <!-- Telemetry & Crew Info -->
-              <div class="truck-crew-card" id="truckCrewCard">
+              <div class="truck-crew-card" id="truckCrewCard" style="margin-top: 0.75rem;">
                 <div class="crew-avatar">👨‍✈️</div>
                 <div class="crew-details">
                   <div class="crew-name-row">
@@ -811,7 +821,6 @@
                       <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
                       Call Driver (<span id="pickupDriverPhone">+91 98450 12890</span>)
                     </a>
-                    <span class="crew-status-pill badge-green" id="pickupLiveStatusPill">Live Signal Active</span>
                   </div>
                 </div>
               </div>

@@ -86,6 +86,14 @@ const pickupSchema = new mongoose.Schema({
     type: Number,
     default: 18
   },
+  adminRemarks: {
+    type: String,
+    default: ''
+  },
+  progressNote: {
+    type: String,
+    default: ''
+  },
   createdAt: {
     type: Date,
     default: Date.now
