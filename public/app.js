@@ -2662,11 +2662,104 @@ document.addEventListener("DOMContentLoaded", () => {
   if (logoutBtn) logoutBtn.addEventListener("click", logoutUser);
   if (adminLogoutBtn) adminLogoutBtn.addEventListener("click", logoutUser);
 
-  // Dedicated Admin Login Handler on admin.html
+  // Dedicated Admin Login & Registration Handler on admin.html
   const adminLoginForm = document.getElementById("adminLoginForm");
+  const adminRegisterForm = document.getElementById("adminRegisterForm");
   const adminLoginAlert = document.getElementById("adminLoginAlert");
   const adminEmailInput = document.getElementById("adminEmailInput");
+  const adminCredentialIdInput = document.getElementById("adminCredentialIdInput");
   const adminPasswordInput = document.getElementById("adminPasswordInput");
+
+  // Admin Register inputs & tabs
+  const adminTabLoginBtn = document.getElementById("adminTabLoginBtn");
+  const adminTabRegisterBtn = document.getElementById("adminTabRegisterBtn");
+  const adminAuthTitle = document.getElementById("adminAuthTitle");
+  const adminAuthSub = document.getElementById("adminAuthSub");
+  const adminRegisterNameInput = document.getElementById("adminRegisterNameInput");
+  const adminRegisterEmailInput = document.getElementById("adminRegisterEmailInput");
+  const adminRegisterCredentialIdInput = document.getElementById("adminRegisterCredentialIdInput");
+  const adminRegisterPasswordInput = document.getElementById("adminRegisterPasswordInput");
+
+  // Tab switching between Officer Sign In and Register Admin
+  if (adminTabLoginBtn && adminTabRegisterBtn && adminLoginForm && adminRegisterForm) {
+    adminTabLoginBtn.addEventListener("click", () => {
+      adminTabLoginBtn.classList.add("active");
+      adminTabRegisterBtn.classList.remove("active");
+      adminLoginForm.classList.remove("hidden");
+      adminRegisterForm.classList.add("hidden");
+      if (adminAuthTitle) adminAuthTitle.textContent = "Officer Authentication";
+      if (adminAuthSub) adminAuthSub.textContent = "Secure access for municipal inspectors, ward officers, and sanitation dispatchers.";
+      if (adminLoginAlert) adminLoginAlert.classList.add("hidden");
+    });
+
+    adminTabRegisterBtn.addEventListener("click", () => {
+      adminTabRegisterBtn.classList.add("active");
+      adminTabLoginBtn.classList.remove("active");
+      adminRegisterForm.classList.remove("hidden");
+      adminLoginForm.classList.add("hidden");
+      if (adminAuthTitle) adminAuthTitle.textContent = "Register Municipal Officer";
+      if (adminAuthSub) adminAuthSub.textContent = "Create an authorized municipal admin account using your Officer Credential ID.";
+      if (adminLoginAlert) adminLoginAlert.classList.add("hidden");
+    });
+  }
+
+  // Admin Registration form submit handler
+  if (adminRegisterForm) {
+    adminRegisterForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (adminLoginAlert) adminLoginAlert.classList.add("hidden");
+
+      const name = adminRegisterNameInput ? adminRegisterNameInput.value.trim() : "";
+      const email = adminRegisterEmailInput ? adminRegisterEmailInput.value.trim() : "";
+      const credentialId = adminRegisterCredentialIdInput ? adminRegisterCredentialIdInput.value.trim() : "";
+      const password = adminRegisterPasswordInput ? adminRegisterPasswordInput.value : "";
+
+      if (!name || !email || !password || !credentialId) {
+        if (adminLoginAlert) {
+          adminLoginAlert.textContent = "Please fill in all fields including the Officer Credential ID.";
+          adminLoginAlert.className = "auth-alert error";
+          adminLoginAlert.classList.remove("hidden");
+        }
+        return;
+      }
+
+      try {
+        const response = await fetch("/api/auth/register-admin", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, email, password, credentialId })
+        });
+
+        const data = await parseResponsePayload(response);
+
+        if (!response.ok) {
+          if (adminLoginAlert) {
+            const errMsg = data.error || data.message || "Admin registration failed.";
+            adminLoginAlert.textContent = errMsg;
+            adminLoginAlert.className = "auth-alert error";
+            adminLoginAlert.classList.remove("hidden");
+          }
+          return;
+        }
+
+        // Store token & unlock admin dashboard
+        localStorage.setItem(TOKEN_KEY, data.token);
+        localStorage.setItem("cleanpulse_token", data.token);
+        currentUser = data.user;
+        if (adminAuthGate) adminAuthGate.classList.add("hidden");
+        if (adminOfficerName) adminOfficerName.textContent = data.user.name;
+        const adminAvatar = document.getElementById("adminAvatar");
+        if (adminAvatar) adminAvatar.textContent = "AD";
+        loadAdminDashboard();
+      } catch (err) {
+        if (adminLoginAlert) {
+          adminLoginAlert.textContent = `Network error: ${err.message || "Could not connect to server."}`;
+          adminLoginAlert.className = "auth-alert error";
+          adminLoginAlert.classList.remove("hidden");
+        }
+      }
+    });
+  }
 
   if (adminLoginForm) {
     adminLoginForm.addEventListener("submit", async (e) => {
@@ -2674,13 +2767,23 @@ document.addEventListener("DOMContentLoaded", () => {
       if (adminLoginAlert) adminLoginAlert.classList.add("hidden");
 
       const email = adminEmailInput ? adminEmailInput.value.trim() : "";
+      const credentialId = adminCredentialIdInput ? adminCredentialIdInput.value.trim() : "";
       const password = adminPasswordInput ? adminPasswordInput.value : "";
+
+      if (!credentialId) {
+        if (adminLoginAlert) {
+          adminLoginAlert.textContent = "Please enter your Officer Credential ID.";
+          adminLoginAlert.className = "auth-alert error";
+          adminLoginAlert.classList.remove("hidden");
+        }
+        return;
+      }
 
       try {
         const response = await fetch("/api/auth/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password })
+          body: JSON.stringify({ email, password, credentialId })
         });
 
         const data = await parseResponsePayload(response);
