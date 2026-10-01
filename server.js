@@ -39,99 +39,20 @@ app.use((req, res, next) => {
 const Complaint = require('./models/Complaint');
 const Pickup = require('./models/Pickup');
 
-// Seed default admin account and sample complaints/pickups
+// Seed default admin account if not already present
 async function seedDefaults() {
   try {
-    const adminEmails = [
-      (process.env.ADMIN_EMAIL || 'admin@prabhav.gov').toLowerCase(),
-      'admin@cleanpulse.gov'
-    ];
-    let adminUser = null;
-    for (const email of adminEmails) {
-      let existing = await User.findOne({ email });
-      if (!existing) {
-        const hashedPassword = await bcrypt.hash(process.env.ADMIN_PASSWORD || 'Admin@123', 10);
-        existing = await User.create({
-          name: 'Chief Municipal Officer',
-          email,
-          password: hashedPassword,
-          role: 'admin'
-        });
-        console.log(`✓ Admin account created: ${email}`);
-      }
-      if (!adminUser) adminUser = existing;
-    }
-
-    // Seed default complaints if CP-1001 doesn't exist
-    const sampleC = await Complaint.findOne({ complaintId: 'CP-1001' });
-    if (!sampleC && adminUser) {
-      await Complaint.create({
-        complaintId: 'CP-1001',
-        userId: adminUser._id,
-        reporterName: 'Sunil Rao',
-        title: 'Overflowing Commercial Dumpster',
-        category: 'Overflowing Bin',
-        description: 'Commercial waste overflowing near Central Metro Station, blocking sidewalk.',
-        locationText: 'Ward 12, MG Road Central',
-        coordinates: { lat: 12.9756, lng: 77.6080 },
-        status: 'In-Progress',
-        imageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
-        adminRemarks: 'Sanitation squad dispatched with compactor vehicle TRUCK-KA-04-892.'
+    const adminEmail = (process.env.ADMIN_EMAIL || 'admin@prabhav.gov').toLowerCase();
+    let existing = await User.findOne({ email: adminEmail });
+    if (!existing) {
+      const hashedPassword = await bcrypt.hash(process.env.ADMIN_PASSWORD || 'Admin@123', 10);
+      await User.create({
+        name: 'Chief Municipal Officer',
+        email: adminEmail,
+        password: hashedPassword,
+        role: 'admin'
       });
-      console.log('✓ Seeded complaint CP-1001');
-    }
-
-    // Seed default pickup PU-8821 if it doesn't exist
-    const sampleP = await Pickup.findOne({ pickupId: 'PU-8821' });
-    if (!sampleP && adminUser) {
-      await Pickup.create({
-        pickupId: 'PU-8821',
-        userId: adminUser._id,
-        wasteType: 'E-Waste (Old Appliances & TV)',
-        address: '#42, 2nd Main, Indiranagar (Ward 14)',
-        coordinates: { lat: 12.9784, lng: 77.6408 },
-        scheduledDate: new Date(Date.now() + 86400000),
-        status: 'In-Transit',
-        assignedVehicle: 'VAN-SPEC-02',
-        truckNumber: 'KA-01-EA-4920',
-        driverName: 'Rajesh Kumar (Senior Crew Lead)',
-        driverPhone: '+91 98450 12890',
-        truckLocation: {
-          lat: 12.9680,
-          lng: 77.6320,
-          addressText: 'Indiranagar 100ft Rd, approaching 2nd Main',
-          heading: 45,
-          speedKmH: 28,
-          lastUpdated: new Date()
-        },
-        etaMinutes: 14,
-        adminRemarks: 'The truck is dispatched and currently en route to your sector.'
-      });
-
-      await Pickup.create({
-        pickupId: 'PU-8819',
-        userId: adminUser._id,
-        wasteType: 'Bulky Household Furniture',
-        address: 'Apt 304, Green Heights, Jayanagar',
-        coordinates: { lat: 12.9300, lng: 77.5850 },
-        scheduledDate: new Date(Date.now() + 86400000),
-        status: 'Scheduled',
-        assignedVehicle: 'VAN-SPEC-04',
-        truckNumber: 'KA-05-MB-7104',
-        driverName: 'Sunil Gowda',
-        driverPhone: '+91 98450 44120',
-        truckLocation: {
-          lat: 12.9420,
-          lng: 77.5900,
-          addressText: 'South End Circle Zonal Depot',
-          heading: 180,
-          speedKmH: 20,
-          lastUpdated: new Date()
-        },
-        etaMinutes: 28,
-        adminRemarks: 'Vehicle scheduled for morning collection slot at 10:30 AM.'
-      });
-      console.log('✓ Seeded pickups PU-8821 and PU-8819');
+      console.log(`✓ Admin account created: ${adminEmail}`);
     }
   } catch (err) {
     console.error('Data seed error:', err.message);
