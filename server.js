@@ -25,6 +25,14 @@ app.use(express.json({ limit: '15mb' }));
 app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Disable HTTP caching on all API responses so clients immediately reflect real-time database state
+app.use(['/api', '/complaints', '/pickups', '/auth', '/ai'], (req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  next();
+});
+
 // URL Normalization Middleware for Vercel Serverless Rewrites
 app.use((req, res, next) => {
   const orig = req.headers['x-matched-path'] || req.headers['x-forwarded-uri'] || req.originalUrl;

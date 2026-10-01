@@ -516,34 +516,27 @@
 
           <div class="track-card">
             <form id="trackForm" class="track-search-bar">
-              <input type="text" id="trackInput" class="form-control" placeholder="Enter Complaint ID (e.g., CP-1001, CP-1002)" value="CP-1001" required>
+              <input type="text" id="trackInput" class="form-control" placeholder="Enter Complaint ID (e.g., CP-XXXX)" value="" required>
               <button type="submit" class="btn btn-primary">Track Grievance</button>
             </form>
 
-            <div class="quick-chips-row">
-              <span class="quick-chip-label">Quick check:</span>
-              <button type="button" class="quick-chip-btn chip-complaint" data-id="CP-1001">CP-1001 (MG Road)</button>
-              <button type="button" class="quick-chip-btn chip-complaint" data-id="CP-1002">CP-1002 (Koramangala)</button>
-              <button type="button" class="quick-chip-btn chip-complaint" data-id="CP-1003">CP-1003 (Indiranagar)</button>
-            </div>
-
             <!-- Complaint Info Card -->
-            <div class="ticket-summary" id="ticketSummary">
+            <div class="ticket-summary hidden" id="ticketSummary">
               <div class="summary-item">
                 <span class="summary-label">Ticket ID</span>
-                <span class="summary-val" id="trackTicketId">CP-1001</span>
+                <span class="summary-val" id="trackTicketId">--</span>
               </div>
               <div class="summary-item">
                 <span class="summary-label">Category</span>
-                <span class="summary-val" id="trackCategory">Overflowing Bin</span>
+                <span class="summary-val" id="trackCategory">--</span>
               </div>
               <div class="summary-item">
                 <span class="summary-label">Ward / Zone</span>
-                <span class="summary-val" id="trackLocation">Ward 12, MG Road</span>
+                <span class="summary-val" id="trackLocation">--</span>
               </div>
               <div class="summary-item">
                 <span class="summary-label">Last Updated</span>
-                <span class="summary-val" id="trackUpdated">15 mins ago</span>
+                <span class="summary-val" id="trackUpdated">--</span>
               </div>
               <div class="summary-item hidden" id="trackPhotoItem">
                 <span class="summary-label">Evidence Photo</span>
@@ -700,37 +693,31 @@
           <div class="track-card pickup-track-card">
             <!-- Pickup Search Bar -->
             <form id="trackPickupForm" class="track-search-bar">
-              <input type="text" id="trackPickupInput" class="form-control" placeholder="Enter Pickup ID (e.g., PU-8821)" value="PU-8821" required>
+              <input type="text" id="trackPickupInput" class="form-control" placeholder="Enter Pickup ID (e.g., PU-XXXX)" value="" required>
               <button type="submit" class="btn btn-primary">Track Pickup</button>
             </form>
 
-            <div class="quick-chips-row">
-              <span class="quick-chip-label">Quick check:</span>
-              <button type="button" class="quick-chip-btn chip-pickup" data-id="PU-8821">PU-8821 (E-Waste)</button>
-              <button type="button" class="quick-chip-btn chip-pickup" data-id="PU-8819">PU-8819 (Furniture)</button>
-            </div>
-
             <!-- Pickup Summary Card -->
-            <div class="ticket-summary pickup-summary" id="pickupSummaryCard">
+            <div class="ticket-summary pickup-summary hidden" id="pickupSummaryCard">
               <div class="summary-item">
                 <span class="summary-label">Booking ID</span>
-                <span class="summary-val" id="trackPickupId">PU-8821</span>
+                <span class="summary-val" id="trackPickupId">--</span>
               </div>
               <div class="summary-item">
                 <span class="summary-label">Waste Type</span>
-                <span class="summary-val" id="trackPickupWasteType">E-Waste & Appliances</span>
+                <span class="summary-val" id="trackPickupWasteType">--</span>
               </div>
               <div class="summary-item">
                 <span class="summary-label">Doorstep Address</span>
-                <span class="summary-val" id="trackPickupAddress">Indiranagar Ward 14</span>
+                <span class="summary-val" id="trackPickupAddress">--</span>
               </div>
               <div class="summary-item">
                 <span class="summary-label">Scheduled Date</span>
-                <span class="summary-val" id="trackPickupDate">Tomorrow</span>
+                <span class="summary-val" id="trackPickupDate">--</span>
               </div>
               <div class="summary-item">
                 <span class="summary-label">Collection Tariff</span>
-                <span class="summary-val" id="trackPickupFee">₹200</span>
+                <span class="summary-val" id="trackPickupFee">--</span>
               </div>
             </div>
 

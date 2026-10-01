@@ -430,6 +430,9 @@ document.addEventListener("DOMContentLoaded", () => {
       const complaint = data.complaint;
       currentTrackedComplaint = complaint;
 
+      const ticketSummaryEl = document.getElementById("ticketSummary");
+      if (ticketSummaryEl) ticketSummaryEl.classList.remove("hidden");
+
       if (trackTicketId) trackTicketId.textContent = complaint.complaintId;
       if (trackCategory) trackCategory.textContent = complaint.category;
       if (trackLocation) trackLocation.textContent = complaint.locationText || `${complaint.coordinates.lat.toFixed(4)}, ${complaint.coordinates.lng.toFixed(4)}`;
@@ -758,6 +761,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const p = data.pickup;
       currentTrackedPickup = p;
+
+      const pickupSummaryCardEl = document.getElementById("pickupSummaryCard");
+      if (pickupSummaryCardEl) pickupSummaryCardEl.classList.remove("hidden");
 
       if (trackPickupId) trackPickupId.textContent = p.pickupId;
       if (trackPickupWasteType) trackPickupWasteType.textContent = p.wasteType || 'Special Waste';
@@ -2084,9 +2090,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (!feedbackGrid) return;
 
-    const ratedComplaints = complaints.filter(c => typeof c.feedbackRating === 'number' && c.feedbackRating > 0);
+    const ratedComplaints = (complaints || []).filter(c => typeof c.feedbackRating === 'number' && c.feedbackRating > 0);
 
-    if (ratedComplaints.length === 0) return;
+    if (ratedComplaints.length === 0) {
+      if (overallRatingEl) overallRatingEl.textContent = "5.0";
+      if (overallStarsEl) overallStarsEl.textContent = "★★★★★";
+      if (overallCountEl) overallCountEl.textContent = "0 Ratings";
+      feedbackGrid.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); padding: 2.5rem;">No citizen ratings or feedback reviews recorded yet.</div>`;
+      return;
+    }
 
     const avg = (ratedComplaints.reduce((acc, c) => acc + c.feedbackRating, 0) / ratedComplaints.length).toFixed(1);
     if (overallRatingEl) overallRatingEl.textContent = avg;
@@ -2947,15 +2959,5 @@ document.addEventListener("DOMContentLoaded", () => {
   if (typeof updatePickupPricingUI === 'function') {
     updatePickupPricingUI();
   }
-
-  // Auto-initialize dual column trackers with live demonstration data
-  setTimeout(() => {
-    if (typeof updateTrackerUI === 'function' && trackInput && trackInput.value) {
-      updateTrackerUI(trackInput.value.trim());
-    }
-    if (typeof updatePickupTrackerUI === 'function' && trackPickupInput && trackPickupInput.value) {
-      updatePickupTrackerUI(trackPickupInput.value.trim());
-    }
-  }, 400);
 });
 
